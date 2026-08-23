@@ -1,29 +1,19 @@
-import React, { useState, useEffect } from 'react';
-
-interface DbUser {
-  id: number;
-  full_name: string;
-  email: string;
-  role: string;
-  department: string;
-  status: string;
-  created_at: string;
-  submissions_count: string;
-}
+import React, { useEffect, useState } from 'react';
+import { api } from '../../lib/api';
+import { Users, Plus, ShieldCheck, UserCheck, Mail, Building2, CheckCircle2 } from 'lucide-react';
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<DbUser[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // New user form state
+  // New User Form
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('employee');
-  const [department, setDepartment] = useState('Credit & Loan Operations');
+  const [password, setPassword] = useState('Officer@123');
+  const [role, setRole] = useState('RISK_OFFICER');
+  const [department, setDepartment] = useState('Corporate Risk');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -32,13 +22,10 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/auth/admin/users');
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data);
-      }
+      const list = await api.getAdminUsers();
+      setUsers(list);
     } catch (err) {
-      console.error('Error loading users:', err);
+      console.error('Failed to load users:', err);
     } finally {
       setLoading(false);
     }
@@ -46,117 +33,90 @@ export default function UserManagement() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setMessage(null);
-
     try {
-      const res = await fetch('/api/v1/auth/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: fullName,
-          email,
-          password: password || 'password123',
-          role,
-          department,
-        }),
+      setSaving(true);
+      await api.createAdminUser({
+        fullName,
+        email,
+        password,
+        role,
+        department,
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to create user');
-      }
-
-      setMessage('User created and stored in PostgreSQL successfully!');
+      setIsModalOpen(false);
       setFullName('');
       setEmail('');
-      setPassword('');
-      setShowModal(false);
       fetchUsers();
     } catch (err: any) {
-      setMessage(err.message);
+      alert(`Failed to create user: ${err.message}`);
     } finally {
       setSaving(false);
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'risk_officer':
-        return 'bg-secondary/15 text-secondary border border-secondary/30 font-bold';
-      case 'employee':
-        return 'bg-tertiary-container/10 text-on-tertiary-container border border-tertiary-fixed-dim/40 font-bold';
-      case 'admin':
-      default:
-        return 'bg-primary-container/10 text-primary-container border border-primary-container/30 font-bold';
-    }
-  };
-
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 pb-16">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-xs">
         <div>
-          <h2 className="text-2xl font-bold text-primary tracking-tight">Staff Account Management</h2>
-          <p className="text-sm text-on-surface-variant mt-1">
-            Registered personnel and access roles fetched directly from PostgreSQL database.
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="w-4 h-4 text-secondary" />
+            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+              System Administration
+            </span>
+          </div>
+          <h1 className="text-xl font-bold text-primary">Staff User Accounts</h1>
+          <p className="text-xs text-on-surface-variant">
+            Manage user roles (SYSTEM_ADMIN, RISK_OFFICER), corporate credentials, and organizational access.
           </p>
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
         >
-          <span className="material-symbols-outlined text-[18px]">person_add</span>
-          Add New User Account
+          <Plus className="w-4 h-4" />
+          <span>Add User Account</span>
         </button>
       </div>
 
-      {message && (
-        <div className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs font-semibold text-on-surface">
-          {message}
-        </div>
-      )}
-
-      {/* Users Table */}
-      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-xs overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-xs text-on-surface-variant">Loading user accounts from database...</div>
+          <div className="p-12 text-center text-xs font-semibold text-on-surface-variant">Loading user directory...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="bg-surface-container-low border-b border-outline-variant text-[11px] uppercase font-bold text-on-surface-variant tracking-wider">
-                  <th className="px-5 py-3.5">User Details</th>
-                  <th className="px-5 py-3.5">Role</th>
-                  <th className="px-5 py-3.5">Department</th>
-                  <th className="px-5 py-3.5 text-center">Status</th>
-                  <th className="px-5 py-3.5 text-center">Submissions Count</th>
-                  <th className="px-5 py-3.5 text-right">Created Date</th>
+                <tr className="border-b border-outline-variant bg-surface-container-low text-[11px] uppercase tracking-wider text-on-surface-variant">
+                  <th className="py-3 px-6 font-bold">User</th>
+                  <th className="py-3 px-4 font-bold">Corporate Email</th>
+                  <th className="py-3 px-4 font-bold">Role</th>
+                  <th className="py-3 px-4 font-bold">Department</th>
+                  <th className="py-3 px-4 font-bold">Status</th>
+                  <th className="py-3 px-6 font-bold">Created Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/60 text-xs">
+              <tbody className="divide-y divide-outline-variant/30">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-surface-container-low transition-colors">
-                    <td className="px-5 py-4">
-                      <p className="font-bold text-on-surface">{u.full_name}</p>
-                      <p className="text-[11px] text-on-surface-variant">{u.email}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] ${getRoleBadge(u.role)}`}>
-                        {u.role.replace('_', ' ')}
+                  <tr key={u.id} className="hover:bg-surface-container-low">
+                    <td className="py-4 px-6 font-bold text-primary">{u.full_name}</td>
+                    <td className="py-4 px-4 text-on-surface font-medium">{u.email}</td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          u.role === 'SYSTEM_ADMIN'
+                            ? 'bg-primary-container/20 text-primary border-primary-container/40'
+                            : 'bg-secondary-container/20 text-secondary border-secondary-container/40'
+                        }`}
+                      >
+                        {u.role}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-on-surface font-medium">{u.department}</td>
-                    <td className="px-5 py-4 text-center">
-                      <span className="inline-flex items-center gap-1 font-semibold text-on-tertiary-container">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active
+                    <td className="py-4 px-4 text-on-surface-variant">{u.department}</td>
+                    <td className="py-4 px-4">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary-container/20 text-on-tertiary-container border border-tertiary-fixed-dim/30">
+                        {u.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-center font-bold text-on-surface">
-                      {u.submissions_count || '0'}
-                    </td>
-                    <td className="px-5 py-4 text-right text-on-surface-variant">
+                    <td className="py-4 px-6 text-on-surface-variant">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
                   </tr>
@@ -168,91 +128,98 @@ export default function UserManagement() {
       </div>
 
       {/* Add User Modal */}
-      {showModal && (
+      {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
-              <h3 className="text-lg font-bold text-on-surface">Create New User Account</h3>
-              <button onClick={() => setShowModal(false)} className="text-on-surface-variant hover:text-on-surface">
-                <span className="material-symbols-outlined">close</span>
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex justify-between items-start">
+              <h3 className="text-base font-bold text-primary">Provision New User Account</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-outline hover:text-on-surface text-lg cursor-pointer">
+                ✕
               </button>
             </div>
 
             <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
               <div>
-                <label className="block font-bold uppercase tracking-wider text-on-surface-variant mb-1">Full Name</label>
+                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g., Eric Karasira"
-                  className="w-full h-9 px-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface outline-none"
+                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
                 />
               </div>
 
               <div>
-                <label className="block font-bold uppercase tracking-wider text-on-surface-variant mb-1">Email Address</label>
+                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                  Corporate Email
+                </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="eric@sagerganza.rw"
-                  className="w-full h-9 px-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface outline-none"
+                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
                 />
               </div>
 
               <div>
-                <label className="block font-bold uppercase tracking-wider text-on-surface-variant mb-1">Password</label>
+                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                  Initial Password
+                </label>
                 <input
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Defaults to password123"
-                  className="w-full h-9 px-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface outline-none"
+                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
                 />
               </div>
 
-              <div>
-                <label className="block font-bold uppercase tracking-wider text-on-surface-variant mb-1">System Role</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface outline-none"
-                >
-                  <option value="employee">Loan & Credit Officer (Employee)</option>
-                  <option value="risk_officer">Risk & Compliance Officer</option>
-                  <option value="admin">System Administrator</option>
-                </select>
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                    Role
+                  </label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
+                  >
+                    <option value="RISK_OFFICER">RISK_OFFICER</option>
+                    <option value="SYSTEM_ADMIN">SYSTEM_ADMIN</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block font-bold uppercase tracking-wider text-on-surface-variant mb-1">Department</label>
-                <input
-                  type="text"
-                  required
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="e.g., Credit & Loan Operations"
-                  className="w-full h-9 px-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface outline-none"
-                />
+                <div>
+                  <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-semibold"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-surface-container font-bold text-on-surface cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold shadow-xs hover:bg-primary/90"
+                  className="px-5 py-2 rounded-xl bg-primary text-on-primary font-bold hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
                 >
-                  {saving ? 'Creating in PostgreSQL...' : 'Create Account'}
+                  {saving ? 'Creating...' : 'Create Account'}
                 </button>
               </div>
             </form>

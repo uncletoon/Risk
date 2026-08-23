@@ -1,12 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+export type UserRole = 'SYSTEM_ADMIN' | 'RISK_OFFICER' | 'admin' | 'risk_officer' | 'employee';
+
 export interface User {
   id: number;
   full_name: string;
   email: string;
-  role: 'admin' | 'risk_officer' | 'employee';
+  role: UserRole;
   department: string;
   status?: string;
+  organization_id?: number;
+  organization_name?: string;
   token?: string;
 }
 
@@ -17,6 +21,8 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   error: string | null;
+  isSystemAdmin: boolean;
+  isRiskOfficer: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +32,8 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   loading: false,
   error: null,
+  isSystemAdmin: false,
+  isRiskOfficer: false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -39,14 +47,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync user profile directly with PostgreSQL database on startup
+  // Sync user profile directly with backend API on startup
   useEffect(() => {
     const refreshUserFromDb = async () => {
       const storedToken = localStorage.getItem('eridss_token');
       if (!storedToken) return;
 
       try {
-        const res = await fetch('/api/v1/auth/me', {
+        const res = await fetch('/api/auth/me', {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
@@ -59,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           logout();
         }
       } catch (err) {
-        console.error('Failed to sync user with database:', err);
+        console.error('Failed to sync user profile with database:', err);
       }
     };
 
@@ -70,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/v1/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -102,6 +110,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('eridss_token');
   };
 
+  const roleStr = (user?.role || '').toUpperCase();
+  const isSystemAdmin = roleStr === 'SYSTEM_ADMIN' || roleStr === 'ADMIN';
+  const isRiskOfficer = roleStr === 'RISK_OFFICER' || roleStr === 'OFFICER' || roleStr === 'EMPLOYEE';
+
   return (
     <AuthContext.Provider
       value={{
@@ -111,6 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         loading,
         error,
+        isSystemAdmin,
+        isRiskOfficer,
       }}
     >
       {children}

@@ -4,20 +4,23 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/layout/Sidebar';
 import TopNavbar from './components/layout/TopNavbar';
 
-// Portals by role
-import EmployeeDashboard from './pages/employee/EmployeeDashboard';
-import EmployeeProfile from './pages/employee/EmployeeProfile';
-import OfficerDashboard from './pages/officer/OfficerDashboard';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import UserManagement from './pages/admin/UserManagement';
-import SystemHealth from './pages/admin/SystemHealth';
-import AssessmentDetails from './pages/officer/AssessmentDetails';
-
-// Shared / Role Specific Functional Pages
-import SubmitReport from './pages/SubmitReport';
-import RiskOfficerReview from './pages/RiskOfficerReview';
-import RisksList from './pages/RisksList';
+// Core Pages
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import OrganizationProfile from './pages/OrganizationProfile';
+import NewAssessment from './pages/NewAssessment';
+import AssessmentList from './pages/AssessmentList';
+import AssessmentDetails from './pages/AssessmentDetails';
+import MitigationManagement from './pages/MitigationManagement';
+import AssessmentHistory from './pages/AssessmentHistory';
+import Reports from './pages/Reports';
+
+// Admin Governance Pages
+import UserManagement from './pages/admin/UserManagement';
+import RiskCategories from './pages/admin/RiskCategories';
+import RiskRules from './pages/admin/RiskRules';
+import AuditLogs from './pages/admin/AuditLogs';
+import SystemHealth from './pages/admin/SystemHealth';
 
 function ProtectedLayout({ children, title }: { children: React.ReactNode; title: string }) {
   const { user } = useAuth();
@@ -39,104 +42,134 @@ function ProtectedLayout({ children, title }: { children: React.ReactNode; title
   );
 }
 
-function RoleBasedDashboard() {
-  const { user } = useAuth();
-  if (user?.role === 'employee') {
-    return (
-      <ProtectedLayout title="Loan Officer Intake & Reports Portal">
-        <EmployeeDashboard />
-      </ProtectedLayout>
-    );
-  }
-  if (user?.role === 'risk_officer') {
-    return (
-      <ProtectedLayout title="Risk Officer Decision Desk & AI Modeling">
-        <OfficerDashboard />
-      </ProtectedLayout>
-    );
-  }
-  return (
-    <ProtectedLayout title="Executive System Administration Dashboard">
-      <AdminDashboard />
-    </ProtectedLayout>
-  );
-}
-
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, isSystemAdmin } = useAuth();
 
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-      
-      {/* Dynamic Role-Based Dashboard Portal */}
-      <Route path="/dashboard" element={<RoleBasedDashboard />} />
 
-      {/* Employee Specific Routes */}
+      {/* Main Dashboard for both roles */}
       <Route
-        path="/submissions/new"
+        path="/dashboard"
         element={
-          <ProtectedLayout title="Submit Risk Evidence & PII Scanner">
-            <SubmitReport />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/employee/profile"
-        element={
-          <ProtectedLayout title="Staff Member Profile">
-            <EmployeeProfile />
+          <ProtectedLayout title="Executive Enterprise Risk Intelligence Dashboard">
+            <Dashboard />
           </ProtectedLayout>
         }
       />
 
-      {/* Risk Officer Specific Routes */}
+      {/* Risk Officer Endpoints */}
       <Route
-        path="/officer/reviews"
+        path="/organization"
         element={
-          <ProtectedLayout title="Risk Decision Desk & Custom Underwriting Rules">
-            <RiskOfficerReview />
+          <ProtectedLayout title="Organization Profile & Scope">
+            <OrganizationProfile />
           </ProtectedLayout>
         }
       />
 
       <Route
-        path="/officer/assessment/:id"
+        path="/assessments/new"
         element={
-          <ProtectedLayout title="AI Risk Assessment & Predictive Analytics">
+          <ProtectedLayout title="Single-Document Risk Assessment Wizard">
+            <NewAssessment />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/assessments"
+        element={
+          <ProtectedLayout title="Enterprise Assessments Repository">
+            <AssessmentList />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/assessments/:id"
+        element={
+          <ProtectedLayout title="Risk Decision Desk & AI Analytics">
             <AssessmentDetails />
           </ProtectedLayout>
         }
       />
 
-      {/* Admin Specific Routes */}
+      <Route
+        path="/mitigations"
+        element={
+          <ProtectedLayout title="Risk Mitigation & Action Management">
+            <MitigationManagement />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/history"
+        element={
+          <ProtectedLayout title="Longitudinal Risk Progression & Historical Trends">
+            <AssessmentHistory />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedLayout title="Audit-Ready Formal Enterprise Risk Reports">
+            <Reports />
+          </ProtectedLayout>
+        }
+      />
+
+      {/* System Admin Governance Endpoints */}
       <Route
         path="/admin/users"
         element={
-          <ProtectedLayout title="Staff User Management">
+          <ProtectedLayout title="User Accounts & Permissions Governance">
             <UserManagement />
           </ProtectedLayout>
         }
       />
+
+      <Route
+        path="/admin/categories"
+        element={
+          <ProtectedLayout title="Risk Categories & Mathematical Weighting Engine">
+            <RiskCategories />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/admin/rules"
+        element={
+          <ProtectedLayout title="Deterministic Business Rules Engine">
+            <RiskRules />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <ProtectedLayout title="System Activity & Security Audit Trail">
+            <AuditLogs />
+          </ProtectedLayout>
+        }
+      />
+
       <Route
         path="/admin/health"
         element={
-          <ProtectedLayout title="PostgreSQL Database & System Health">
+          <ProtectedLayout title="Database & Operational Diagnostics">
             <SystemHealth />
           </ProtectedLayout>
         }
       />
 
-      {/* Risk Registry Table in Rwf */}
-      <Route
-        path="/risks"
-        element={
-          <ProtectedLayout title="Active Risk Registry (Rwf Exposure)">
-            <RisksList />
-          </ProtectedLayout>
-        }
-      />
-
+      {/* Fallback Redirect */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

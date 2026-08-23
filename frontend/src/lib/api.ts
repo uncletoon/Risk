@@ -1,0 +1,345 @@
+// ============================================================================
+// ERIDSS Frontend API Client
+// ============================================================================
+
+export interface Assessment {
+  id: number;
+  organization_id: number;
+  org_name?: string;
+  org_industry?: string;
+  org_description?: string;
+  title: string;
+  status: 'UPLOADED' | 'PROCESSING' | 'EXTRACTING' | 'ASSESSING' | 'ANALYZING' | 'COMPLETED' | 'FAILED';
+  progress_step?: string;
+  failure_reason?: string;
+  overall_eri?: number;
+  eri_classification?: string;
+  document_summary?: string;
+  document_name?: string;
+  file_size?: number;
+  creator_name?: string;
+  risk_count?: number;
+  mitigation_count?: number;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface ExtractedFact {
+  id: number;
+  category_code: string;
+  fact_key: string;
+  fact_value: string;
+  numerical_value?: number;
+  raw_evidence_text: string;
+  source_location?: string;
+  confidence: number;
+}
+
+export interface IdentifiedRisk {
+  id: number;
+  assessment_id: number;
+  category_code: string;
+  category_name?: string;
+  risk_name: string;
+  risk_description: string;
+  likelihood: number;
+  impact: number;
+  inherent_risk: number;
+  inherent_classification: string;
+  control_score: number;
+  control_status: 'EVALUATED' | 'INSUFFICIENT_DATA';
+  residual_risk: number;
+  residual_classification: string;
+  explanation?: string;
+  confidence: string;
+  evidence_list?: Array<{ id: number; evidence_text: string; source_location: string; confidence: string }>;
+  controls_list?: Array<{ id: number; control_name: string; control_type: string; effectiveness_pct: number; status: string; source_evidence: string }>;
+}
+
+export interface RiskScore {
+  id: number;
+  assessment_id: number;
+  category_code: string;
+  category_name?: string;
+  category_desc?: string;
+  category_score: number;
+  category_weight: number;
+  weighted_score: number;
+}
+
+export interface AIAnalysis {
+  id: number;
+  assessment_id: number;
+  executive_summary: string;
+  risk_position_overview?: string;
+  top_risk_drivers?: Array<{ driver_title: string; category: string; impact_summary: string; supporting_evidence: string }>;
+  strategic_implications?: string;
+}
+
+export interface AIRecommendation {
+  id: number;
+  assessment_id: number;
+  identified_risk_id?: number;
+  risk_name?: string;
+  category_code?: string;
+  title: string;
+  recommendation_text: string;
+  priority: 'IMMEDIATE' | 'SHORT_TERM' | 'MEDIUM_TERM';
+  suggested_timeframe: string;
+  expected_outcome?: string;
+}
+
+export interface MitigationAction {
+  id: number;
+  assessment_id: number;
+  identified_risk_id?: number;
+  recommendation_id?: number;
+  title: string;
+  action_description: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  assigned_to: string;
+  department: string;
+  due_date?: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  progress_pct: number;
+  expected_outcome?: string;
+  notes?: string;
+  risk_name?: string;
+  category_code?: string;
+  assessment_title?: string;
+  org_name?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface AssessmentDetailsResponse {
+  assessment: Assessment;
+  document: {
+    id: number;
+    filename: string;
+    original_name: string;
+    mime_type: string;
+    file_size: number;
+    extracted_text_preview?: string;
+    metadata?: any;
+    created_at: string;
+  } | null;
+  extractedFacts: ExtractedFact[];
+  identifiedRisks: IdentifiedRisk[];
+  riskScores: RiskScore[];
+  aiAnalysis: AIAnalysis | null;
+  recommendations: AIRecommendation[];
+  mitigations: MitigationAction[];
+}
+
+function getAuthHeader(): HeadersInit {
+  const token = localStorage.getItem('eridss_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(errorData.message || `Request failed with status ${res.status}`);
+  }
+  return res.json();
+}
+
+export const api = {
+  // Dashboard
+  getDashboard: async (organizationId?: number) => {
+    const url = organizationId ? `/api/dashboard?organizationId=${organizationId}` : '/api/dashboard';
+    const res = await fetch(url, { headers: getAuthHeader() });
+    return handleResponse<any>(res);
+  },
+
+  // Assessments
+  getAssessments: async (organizationId?: number) => {
+    const url = organizationId ? `/api/assessments?organizationId=${organizationId}` : '/api/assessments';
+    const res = await fetch(url, { headers: getAuthHeader() });
+    return handleResponse<Assessment[]>(res);
+  },
+
+  getAssessment: async (id: number | string) => {
+    const res = await fetch(`/api/assessments/${id}`, { headers: getAuthHeader() });
+    return handleResponse<AssessmentDetailsResponse>(res);
+  },
+
+  createAssessment: async (data: { organizationId: number; title: string }) => {
+    const res = await fetch('/api/assessments', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Assessment>(res);
+  },
+
+  uploadDocument: async (assessmentId: number, file: File, replace: boolean = false) => {
+    const token = localStorage.getItem('eridss_token');
+    const formData = new FormData();
+    formData.append('document', file);
+
+    const res = await fetch(`/api/assessments/${assessmentId}/document?replace=${replace}`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    return handleResponse<{ message: string; document: any }>(res);
+  },
+
+  processAssessment: async (assessmentId: number) => {
+    const res = await fetch(`/api/assessments/${assessmentId}/process`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+    });
+    return handleResponse<any>(res);
+  },
+
+  // Mitigations
+  getMitigations: async (params?: { assessmentId?: number; organizationId?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.assessmentId) query.append('assessmentId', params.assessmentId.toString());
+    if (params?.organizationId) query.append('organizationId', params.organizationId.toString());
+    const res = await fetch(`/api/mitigations?${query.toString()}`, { headers: getAuthHeader() });
+    return handleResponse<MitigationAction[]>(res);
+  },
+
+  createMitigation: async (data: Partial<MitigationAction>) => {
+    const res = await fetch('/api/mitigations', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<MitigationAction>(res);
+  },
+
+  updateMitigation: async (id: number, data: Partial<MitigationAction>) => {
+    const res = await fetch(`/api/mitigations/${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<MitigationAction>(res);
+  },
+
+  getMitigationStats: async (organizationId?: number) => {
+    const url = organizationId ? `/api/mitigations/stats?organizationId=${organizationId}` : '/api/mitigations/stats';
+    const res = await fetch(url, { headers: getAuthHeader() });
+    return handleResponse<any>(res);
+  },
+
+  // Reports
+  getReport: async (assessmentId: number) => {
+    const res = await fetch(`/api/reports/${assessmentId}`, { headers: getAuthHeader() });
+    return handleResponse<any>(res);
+  },
+
+  // AI Risk Advisor
+  askAdvisor: async (data: { assessmentId: number; question: string; chatHistory?: Array<{ role: string; content: string }> }) => {
+    const res = await fetch('/api/ai/advisor/query', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<{ question: string; answer: string; timestamp: string }>(res);
+  },
+
+  // Organizations
+  getOrganizations: async () => {
+    const res = await fetch('/api/organizations', { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  createOrganization: async (data: { name: string; industry?: string; description?: string; contact_email?: string }) => {
+    const res = await fetch('/api/organizations', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  // Admin Endpoints
+  getAdminUsers: async () => {
+    const res = await fetch('/api/admin/users', { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  createAdminUser: async (data: any) => {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  updateAdminUser: async (id: number, data: any) => {
+    const res = await fetch(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  getAdminCategories: async () => {
+    const res = await fetch('/api/admin/categories', { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  updateAdminCategoryWeight: async (code: string, defaultWeight: number) => {
+    const res = await fetch(`/api/admin/categories/${code}/weight`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ defaultWeight }),
+    });
+    return handleResponse<any>(res);
+  },
+
+  getAdminRules: async () => {
+    const res = await fetch('/api/admin/rules', { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  createAdminRule: async (data: any) => {
+    const res = await fetch('/api/admin/rules', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  updateAdminRule: async (id: number, data: any) => {
+    const res = await fetch(`/api/admin/rules/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  deleteAdminRule: async (id: number) => {
+    const res = await fetch(`/api/admin/rules/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    });
+    return handleResponse<{ success: boolean }>(res);
+  },
+
+  getAdminAuditLogs: async (limit: number = 100) => {
+    const res = await fetch(`/api/admin/audit-logs?limit=${limit}`, { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  getAdminHealth: async () => {
+    const res = await fetch('/api/admin/health', { headers: getAuthHeader() });
+    return handleResponse<any>(res);
+  },
+};

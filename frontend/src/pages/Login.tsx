@@ -1,116 +1,124 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { ShieldAlert, Lock, Mail, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
 
 export default function Login() {
   const { login, loading, error } = useAuth();
-  const navigate = useNavigate();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('officer@eridss.com');
+  const [password, setPassword] = useState('Officer@123');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(email, password);
-    if (success) {
-      navigate('/dashboard');
-    }
+    await login(email, password);
+  };
+
+  const handleQuickLogin = (roleEmail: string, rolePass: string) => {
+    setEmail(roleEmail);
+    setPassword(rolePass);
   };
 
   return (
-    <div className="min-h-screen bg-[#0b1320] flex items-center justify-center p-4 sm:p-6 font-body-md text-on-surface antialiased">
-      <div className="w-full max-w-4xl bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/60 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[520px]">
-        
-        {/* Left Side: Brand Identity (5 cols) */}
-        <div className="lg:col-span-5 bg-primary-container p-8 sm:p-10 flex flex-col justify-between text-on-primary relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-on-secondary font-bold text-lg shadow-md">
-                E
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-white">ERIDSS</h1>
-                <p className="text-[10px] text-on-primary-container tracking-wider uppercase font-semibold">Risk Intelligence System</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 my-6">
-              <h2 className="text-xl font-bold text-white leading-snug">
-                Risk Management & Intelligence Platform
-              </h2>
-              <p className="text-xs text-on-primary-container leading-relaxed">
-                Role-based portal for frontline incident reporting, custom underwriting rules, and predictive risk analysis.
-              </p>
-            </div>
-          </div>
-
-          <div className="relative z-10 pt-4 border-t border-white/10 text-xs text-on-primary-container space-y-1">
-            <p className="font-semibold text-white">Prototype Credentials Reference:</p>
-            <p>• Employee: <code className="text-secondary font-data-mono">loan.officer@sagerganza.rw</code></p>
-            <p>• Risk Officer: <code className="text-secondary font-data-mono">risk.officer@sagerganza.rw</code></p>
-            <p>• Administrator: <code className="text-secondary font-data-mono">admin@sagerganza.rw</code></p>
-            <p className="text-[11px] text-on-primary-container/80 pt-1">Default Password: <code className="text-white font-data-mono">password123</code></p>
-          </div>
+    <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-on-surface">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div className="w-14 h-14 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center mx-auto shadow-lg mb-4">
+          <ShieldAlert className="w-8 h-8" />
         </div>
+        <h2 className="text-3xl font-bold tracking-tight text-primary">ERIDSS</h2>
+        <p className="mt-1 text-sm text-on-surface-variant font-medium">
+          Enterprise Risk Intelligence and Decision Support System
+        </p>
+      </div>
 
-        {/* Right Side: Standard Login Form (7 cols) */}
-        <div className="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-center bg-surface-bright">
-          <div className="max-w-md w-full mx-auto">
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-primary">Sign In</h3>
-              <p className="text-xs text-on-surface-variant mt-1">
-                Enter your account credentials to access your portal.
-              </p>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
+        <div className="bg-surface-container-lowest py-8 px-6 shadow-xl rounded-2xl sm:px-10 border border-outline-variant/50">
+          {error && (
+            <div className="mb-5 p-3.5 rounded-xl bg-error-container text-on-error-container text-xs font-semibold flex items-center gap-2 border border-error/20">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
+          )}
 
-            {error && (
-              <div className="mb-5 p-3 rounded-lg bg-error-container/30 border border-error/30 text-on-error-container text-xs font-medium flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px] text-error">error</span>
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface mb-1">
-                  Email Address
-                </label>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+                Corporate Email Address
+              </label>
+              <div className="relative rounded-xl shadow-xs">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
+                  <Mail className="w-4 h-4" />
+                </div>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@sagerganza.rw"
-                  className="w-full h-10 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-xs text-on-surface focus:border-primary focus:ring-1 focus:ring-primary shadow-xs outline-none transition-all"
+                  className="block w-full pl-10 pr-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  placeholder="name@enterprise.com"
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface mb-1">
-                  Password
-                </label>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+                Security Password
+              </label>
+              <div className="relative rounded-xl shadow-xs">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
+                  <Lock className="w-4 h-4" />
+                </div>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full pl-10 pr-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   placeholder="••••••••"
-                  className="w-full h-10 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-xs text-on-surface focus:border-primary focus:ring-1 focus:ring-primary shadow-xs outline-none transition-all"
                 />
               </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-on-primary bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-md transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? (
+                <span>Authenticating Credentials...</span>
+              ) : (
+                <>
+                  <span>Sign In to Risk Portal</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Quick Demo Role Selector */}
+          <div className="mt-8 pt-6 border-t border-outline-variant/40">
+            <p className="text-[11px] uppercase tracking-wider font-bold text-on-surface-variant text-center mb-3">
+              Fast Demo Credential Switcher
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('officer@eridss.com', 'Officer@123')}
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-on-surface transition-colors cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-secondary" />
+                <span>Risk Officer</span>
+              </button>
 
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+                type="button"
+                onClick={() => handleQuickLogin('admin@eridss.com', 'Admin@123')}
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-on-surface transition-colors cursor-pointer"
               >
-                {loading ? 'Authenticating...' : 'Sign In'}
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                <UserCheck className="w-3.5 h-3.5 text-primary" />
+                <span>System Admin</span>
               </button>
-            </form>
+            </div>
           </div>
         </div>
-
       </div>
     </div>
   );
