@@ -127,6 +127,26 @@ async function generatePostCalculationIntelligence(assessmentContext) {
   }
 }
 
+function sanitizeAdvisorResponse(text) {
+  if (!text) return 'This information is not available in the uploaded assessment document.';
+
+  let cleaned = text
+    .replace(/^.*?(?:Verify Constraints|Verification|Thinking Process|Chain of Thought|Constraints Checklist).*?\n/gis, '')
+    .replace(/#{1,6}\s*/g, '') // remove markdown headings #
+    .replace(/\*\*(.*?)\*\*/g, '$1') // remove **bold**
+    .replace(/\*(.*?)\*/g, '$1') // remove *italic*
+    .replace(/_{1,2}(.*?)_{1,2}/g, '$1') // remove _underline_
+    .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // remove `code`
+    .trim();
+
+  // If text starts with leaked constraint check like "• Direct professional...", clean it
+  if (cleaned.toLowerCase().includes('direct professional') && cleaned.toLowerCase().includes('markdown')) {
+    cleaned = cleaned.replace(/^.*?(?:no asterisks|check carefully|yes\.)\s*/gis, '').trim();
+  }
+
+  return cleaned || 'This information is not available in the uploaded assessment document.';
+}
+
 /**
  * Step 3: Grounded Contextual AI Risk Advisor
  * @param {string} question
@@ -142,12 +162,16 @@ async function queryContextualAdvisor(question, assessmentSummary, chatHistory =
       model: DEFAULT_MODEL,
       contents: prompt,
       config: {
+        systemInstruction:
+          'You are the executive Contextual AI Risk Advisor for ERIDSS, conversing directly with the Chief Risk Officer. Provide comprehensive, professional risk advice and strategic recommendations grounded in the assessment data. Do not give superficial single-line answers; provide rich, professional paragraphs and, when applicable, list actionable steps or bullet points. Maintain a clean, human chat tone without markdown header hashtags (#) or asterisks (**) bold wrappers. Never output internal thinking notes or constraint checklists.',
         temperature: 0.2,
+        maxOutputTokens: 2048,
       },
     });
 
+    const rawText = response.text || 'This information is not available in the uploaded assessment document.';
     return {
-      answer: response.text || 'No answer generated.',
+      answer: sanitizeAdvisorResponse(rawText),
     };
   } catch (err) {
     console.error('Gemini Advisor Error:', err);

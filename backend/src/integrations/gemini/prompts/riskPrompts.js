@@ -143,22 +143,40 @@ Respond STRICTLY with valid JSON following this exact schema:
  * Prompt for Step 3: Grounded AI Risk Advisor Contextual Q&A
  */
 function buildAdvisorGroundedPrompt(question, assessmentSummary, chatHistory = []) {
-  return `
-You are the Contextual AI Risk Advisor for ERIDSS, paired with the Chief Risk Officer.
-You must answer questions grounded STRICTLY in the following stored assessment data.
-Do not fabricate information. If data is not present in the assessment, clearly state "This information is not present in the uploaded assessment document."
+  const scoresText = (assessmentSummary?.categoryScores || [])
+    .map(c => `• ${c.category_name || c.category_code}: Score ${Number(c.category_score).toFixed(1)}/100 (Weight ${c.category_weight}%)`)
+    .join('\n');
 
-ASSESSMENT DATA:
-"""
-${JSON.stringify(assessmentSummary, null, 2).slice(0, 25000)}
-"""
+  const risksText = (assessmentSummary?.identifiedRisks || [])
+    .slice(0, 10)
+    .map(r => `• [${r.category}] ${r.name}: Residual Risk ${Number(r.residualRisk).toFixed(1)} (${r.classification}), Inherent ${r.inherentRisk} (Likelihood: ${r.likelihood}/5, Impact: ${r.impact}/5), Control Effectiveness: ${r.controlEffectiveness}% - ${r.description}`)
+    .join('\n');
+
+  const recsText = (assessmentSummary?.recommendations || [])
+    .slice(0, 5)
+    .map(rec => `• [${rec.priority}] ${rec.title}: ${rec.recommendation_text}`)
+    .join('\n');
+
+  return `
+ASSESSMENT CONTEXT:
+Organization: ${assessmentSummary?.organization?.name || 'Enterprise'} (${assessmentSummary?.organization?.industry || 'General'})
+Enterprise Risk Index (ERI): ${Number(assessmentSummary?.assessment?.overallERI || 0).toFixed(1)} / 100 (${assessmentSummary?.assessment?.classification || 'Moderate'})
+Document Scope: ${assessmentSummary?.assessment?.summary || 'Standard assessment'}
+
+Category Breakdown:
+${scoresText || 'No category scores'}
+
+Identified Risks:
+${risksText || 'No identified risks'}
+
+Remediation Actions:
+${recsText || 'No recommendations'}
 
 RECENT CONVERSATION:
-${chatHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+${chatHistory.slice(-4).map(m => `${m.role === 'user' ? 'Risk Officer' : 'Advisor'}: ${m.content}`).join('\n')}
 
-USER QUESTION: "${question}"
-
-Provide a direct, analytical, professional response. Cite specific evidence, scores, categories, and figures from the assessment wherever relevant.
+USER QUESTION:
+${question}
 `;
 }
 

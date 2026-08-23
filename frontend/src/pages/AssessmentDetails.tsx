@@ -68,7 +68,7 @@ export default function AssessmentDetails() {
     {
       role: 'assistant',
       content:
-        'Hello! I am your Contextual AI Risk Advisor. I am grounded strictly in the stored facts, calculations, and evidence of this assessment. Ask me about top risks, category drivers, controls, or mitigation priorities.',
+        "Hello! I am your AI Risk Advisor. I am grounded directly in this assessment's verified data, scores, and evidence. Ask me any question about risks, category drivers, or mitigation priorities.",
     },
   ]);
   const [advisorInput, setAdvisorInput] = useState('');
@@ -183,9 +183,18 @@ export default function AssessmentDetails() {
         chatHistory: history,
       });
 
+      const cleanAnswer = (response.answer || '')
+        .replace(/#{1,6}\s*/g, '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/_{1,2}(.*?)_{1,2}/g, '$1')
+        .replace(/`{1,3}(.*?)`{1,3}/g, '$1')
+        .replace(/^[\s*#-]+\s+/gm, '• ')
+        .trim();
+
       setChatMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: response.answer },
+        { role: 'assistant', content: cleanAnswer || 'This information is not available in the uploaded assessment document.' },
       ]);
     } catch (err: any) {
       setChatMessages((prev) => [
