@@ -74,23 +74,22 @@ describe('Deterministic Calculation Engine', () => {
     assert.strictEqual(res2.classification, 'Critical');
   });
 
-  test('calculateEnterpriseRiskIndex: calculates weighted sum accurately across 6 categories', () => {
+  test('calculateEnterpriseRiskIndex: calculates weighted sum accurately across 5 categories', () => {
     const mockCategoryScores = {
-      FINANCIAL: { categoryCode: 'FINANCIAL', categoryScore: 50, weight: 20 },
-      OPERATIONAL: { categoryCode: 'OPERATIONAL', categoryScore: 40, weight: 20 },
-      STRATEGIC: { categoryCode: 'STRATEGIC', categoryScore: 30, weight: 15 },
-      TECHNOLOGICAL: { categoryCode: 'TECHNOLOGICAL', categoryScore: 60, weight: 15 },
-      LEGAL_REGULATORY: { categoryCode: 'LEGAL_REGULATORY', categoryScore: 20, weight: 10 },
-      MARKET: { categoryCode: 'MARKET', categoryScore: 50, weight: 20 },
+      FINANCIAL: { categoryCode: 'FINANCIAL', categoryScore: 50, weight: 25 },
+      OPERATIONAL: { categoryCode: 'OPERATIONAL', categoryScore: 40, weight: 25 },
+      STRATEGIC: { categoryCode: 'STRATEGIC', categoryScore: 30, weight: 20 },
+      LEGAL_REGULATORY: { categoryCode: 'LEGAL_REGULATORY', categoryScore: 20, weight: 15 },
+      MARKET: { categoryCode: 'MARKET', categoryScore: 50, weight: 15 },
     };
 
     // Expected:
-    // (50*20 + 40*20 + 30*15 + 60*15 + 20*10 + 50*20) / 100
-    // = (1000 + 800 + 450 + 900 + 200 + 1000) / 100
-    // = 4350 / 100 = 43.5 (Moderate)
+    // (50*25 + 40*25 + 30*20 + 20*15 + 50*15) / 100
+    // = (1250 + 1000 + 600 + 300 + 750) / 100
+    // = 3900 / 100 = 39.0 (Low)
     const eri = calculateEnterpriseRiskIndex(mockCategoryScores);
-    assert.strictEqual(eri.eriScore, 43.5);
-    assert.strictEqual(eri.classification, 'Moderate');
+    assert.strictEqual(eri.eriScore, 39.0);
+    assert.strictEqual(eri.classification, 'Low');
     assert.strictEqual(eri.totalWeight, 100);
   });
 });

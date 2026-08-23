@@ -87,6 +87,8 @@ export interface AIRecommendation {
   priority: 'IMMEDIATE' | 'SHORT_TERM' | 'MEDIUM_TERM';
   suggested_timeframe: string;
   expected_outcome?: string;
+  is_converted?: boolean;
+  mitigation_id?: number;
 }
 
 export interface MitigationAction {

@@ -150,7 +150,7 @@ export default function NewAssessment() {
         <div className="text-xs sm:text-sm text-on-surface leading-relaxed">
           <p className="font-extrabold text-secondary">Strict Single-Document Architecture</p>
           <p className="text-on-surface font-medium mt-0.5">
-            The assessment accepts <strong>exactly ONE uploaded document</strong> containing financial, operational, technological, strategic, or compliance data. Gemini AI will autonomously extract facts and evidence without forcing manual questionnaires.
+            The assessment accepts <strong>exactly ONE uploaded document</strong> containing financial, operational, strategic, legal/regulatory, or market data. Gemini AI will autonomously extract facts and evidence without forcing manual questionnaires.
           </p>
         </div>
       </div>

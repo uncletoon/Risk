@@ -242,7 +242,7 @@ export default function Dashboard() {
         <div className="lg:col-span-7 bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant shadow-xs flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-base font-bold text-primary">6-Category Enterprise Risk Matrix</h2>
+              <h2 className="text-base font-bold text-primary">5-Category Enterprise Risk Matrix</h2>
               <p className="text-xs font-medium text-on-surface-variant">
                 Normalized category scores deterministically weighted to produce the ERI.
               </p>

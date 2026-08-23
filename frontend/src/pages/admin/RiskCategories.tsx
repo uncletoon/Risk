@@ -61,7 +61,7 @@ export default function RiskCategories() {
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-primary tracking-tight">Risk Categories & Weighting Engine</h1>
           <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
-            Configure the 6 core enterprise risk categories and their mathematical weights for Enterprise Risk Index (ERI) calculation.
+            Configure the 5 core enterprise risk categories and their mathematical weights for Enterprise Risk Index (ERI) calculation.
           </p>
         </div>
 

@@ -197,7 +197,6 @@ export default function RiskRules() {
                     <option value="FINANCIAL">FINANCIAL</option>
                     <option value="OPERATIONAL">OPERATIONAL</option>
                     <option value="STRATEGIC">STRATEGIC</option>
-                    <option value="TECHNOLOGICAL">TECHNOLOGICAL</option>
                     <option value="LEGAL_REGULATORY">LEGAL_REGULATORY</option>
                     <option value="MARKET">MARKET</option>
                   </select>

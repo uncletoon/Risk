@@ -54,6 +54,7 @@ export default function AssessmentDetails() {
 
   // Convert Recommendation to Mitigation Modal
   const [modalRec, setModalRec] = useState<AIRecommendation | null>(null);
+  const [convertedRecIds, setConvertedRecIds] = useState<number[]>([]);
   const [mitTitle, setMitTitle] = useState('');
   const [mitDesc, setMitDesc] = useState('');
   const [mitPriority, setMitPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('HIGH');
@@ -89,6 +90,8 @@ export default function AssessmentDetails() {
       setLoading(true);
       const res = await api.getAssessment(id!);
       setData(res);
+      const converted = res.recommendations?.filter((r) => r.is_converted).map((r) => r.id) || [];
+      setConvertedRecIds(converted);
       if (['PROCESSING', 'EXTRACTING', 'ASSESSING', 'ANALYZING'].includes(res.assessment.status)) {
         pollStatus();
       }
@@ -104,6 +107,8 @@ export default function AssessmentDetails() {
       try {
         const res = await api.getAssessment(id!);
         setData(res);
+        const converted = res.recommendations?.filter((r) => r.is_converted).map((r) => r.id) || [];
+        setConvertedRecIds(converted);
         if (res.assessment.status === 'COMPLETED' || res.assessment.status === 'FAILED') {
           clearInterval(interval);
           setProcessing(false);
@@ -140,7 +145,7 @@ export default function AssessmentDetails() {
     try {
       setMitSaving(true);
       await api.createMitigation({
-        assessment_id: data.assessment.id,
+        assessment_id: Number(data.assessment.id || id),
         identified_risk_id: modalRec.identified_risk_id,
         recommendation_id: modalRec.id,
         title: mitTitle,
@@ -148,11 +153,12 @@ export default function AssessmentDetails() {
         priority: mitPriority,
         assigned_to: mitAssignee,
         department: mitDept,
-        due_date: mitDueDate,
+        due_date: mitDueDate || undefined,
         expected_outcome: modalRec.expected_outcome,
       });
-      alert('Mitigation action created successfully and added to tracking board.');
+      setConvertedRecIds((prev) => [...prev, modalRec.id]);
       setModalRec(null);
+      await fetchDetails();
     } catch (err: any) {
       alert(`Failed to create mitigation: ${err.message}`);
     } finally {
@@ -570,7 +576,7 @@ export default function AssessmentDetails() {
             <div className="lg:col-span-5 bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant shadow-xs flex flex-col justify-between">
               <div className="mb-2">
                 <h3 className="text-base font-bold text-primary">Multidimensional Footprint</h3>
-                <p className="text-xs font-medium text-on-surface-variant">Normalized 0–100 scale across all 6 domains</p>
+                <p className="text-xs font-medium text-on-surface-variant">Normalized 0–100 scale across all 5 enterprise domains</p>
               </div>
 
               <div className="h-[280px] w-full min-h-[220px]">
@@ -802,13 +808,23 @@ export default function AssessmentDetails() {
                 </div>
 
                 <div className="pt-3 border-t border-outline-variant">
-                  <button
-                    onClick={() => openMitigationModal(rec)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Convert to Mitigation Action</span>
-                  </button>
+                  {rec.is_converted || convertedRecIds.includes(rec.id) ? (
+                    <button
+                      disabled
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-surface-container text-on-surface-variant font-bold text-xs border border-outline-variant cursor-not-allowed opacity-80"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-secondary" />
+                      <span>Converted to Mitigation Action</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => openMitigationModal(rec)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Convert to Mitigation Action</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

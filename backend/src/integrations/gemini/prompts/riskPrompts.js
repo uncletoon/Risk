@@ -9,14 +9,13 @@
 function buildDocumentExtractionPrompt(documentText, organizationProfile) {
   return `
 You are the Chief Risk Officer Intelligence Agent for the Enterprise Risk Intelligence and Decision Support System (ERIDSS).
-Your task is to analyze the provided single business document for organization "${organizationProfile?.name || 'Enterprise'}" (${organizationProfile?.industry || 'Enterprise Business'}) and extract factual business data, evidence, internal controls, and candidate risk factors across the 6 enterprise categories:
+Your task is to analyze the provided single business document for organization "${organizationProfile?.name || 'Enterprise'}" (${organizationProfile?.industry || 'Enterprise Business'}) and extract factual business data, evidence, internal controls, and candidate risk factors across the 5 enterprise categories:
 
 1. FINANCIAL (Capital, liquidity, cash flow, debt leverage, revenue, margins)
 2. OPERATIONAL (Processes, supply chain, key-person dependency, IT operations, vendor dependencies)
 3. STRATEGIC (Market positioning, expansion plans, competitive pressures, business model)
-4. TECHNOLOGICAL (Cybersecurity, MFA coverage, backup systems, legacy systems, IT controls)
-5. LEGAL_REGULATORY (Statutory compliance, litigation, licensing, data protection, regulatory penalties)
-6. MARKET (Customer concentration, inflation, foreign exchange, macro-economic conditions)
+4. LEGAL_REGULATORY (Statutory compliance, litigation, licensing, data protection, regulatory penalties)
+5. MARKET (Customer concentration, inflation, foreign exchange, macro-economic conditions)
 
 RULES:
 - Extract ONLY what is supported by the document. Do NOT invent facts or figures.
@@ -34,8 +33,8 @@ Respond STRICTLY with valid JSON following this exact schema:
   "document_summary": "Concise summary of document scope and business context (2-3 sentences)",
   "extracted_facts": [
     {
-      "category_code": "FINANCIAL" | "OPERATIONAL" | "STRATEGIC" | "TECHNOLOGICAL" | "LEGAL_REGULATORY" | "MARKET",
-      "fact_key": "Descriptive key (e.g. Debt-to-Equity Ratio, Supplier Concentration, MFA Status)",
+      "category_code": "FINANCIAL" | "OPERATIONAL" | "STRATEGIC" | "LEGAL_REGULATORY" | "MARKET",
+      "fact_key": "Descriptive key (e.g. Debt-to-Equity Ratio, Supplier Concentration, Liquidity Ratio)",
       "fact_value": "The extracted value string",
       "numerical_value": number or null,
       "raw_evidence_text": "Verbatim quote or sentence from document",
@@ -45,7 +44,7 @@ Respond STRICTLY with valid JSON following this exact schema:
   ],
   "candidate_risks": [
     {
-      "category_code": "FINANCIAL" | "OPERATIONAL" | "STRATEGIC" | "TECHNOLOGICAL" | "LEGAL_REGULATORY" | "MARKET",
+      "category_code": "FINANCIAL" | "OPERATIONAL" | "STRATEGIC" | "LEGAL_REGULATORY" | "MARKET",
       "risk_name": "Clear professional risk title",
       "risk_description": "Detailed explanation of the risk mechanism and why it matters",
       "suggested_likelihood": number between 1 and 5,
@@ -120,7 +119,7 @@ Respond STRICTLY with valid JSON following this exact schema:
   "top_risk_drivers": [
     {
       "driver_title": "Title of driver",
-      "category": "FINANCIAL" | "OPERATIONAL" | "STRATEGIC" | "TECHNOLOGICAL" | "LEGAL_REGULATORY" | "MARKET",
+      "category": "FINANCIAL" | "OPERATIONAL" | "STRATEGIC" | "LEGAL_REGULATORY" | "MARKET",
       "impact_summary": "Why this driver is elevating the enterprise risk index",
       "supporting_evidence": "Specific evidence citation"
     }

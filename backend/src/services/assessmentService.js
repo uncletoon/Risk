@@ -492,7 +492,18 @@ async function getAssessmentDetails(assessmentId) {
     ),
     pool.query('SELECT * FROM ai_analyses WHERE assessment_id = $1', [assessmentId]),
     pool.query(
-      `SELECT rec.*, r.risk_name, r.category_code
+      `SELECT rec.*, r.risk_name, r.category_code,
+              EXISTS (
+                SELECT 1 FROM mitigation_actions m 
+                WHERE m.recommendation_id = rec.id 
+                   OR (m.assessment_id = rec.assessment_id AND m.title = rec.title)
+              ) as is_converted,
+              (
+                SELECT m.id FROM mitigation_actions m 
+                WHERE m.recommendation_id = rec.id 
+                   OR (m.assessment_id = rec.assessment_id AND m.title = rec.title)
+                LIMIT 1
+              ) as mitigation_id
        FROM ai_recommendations rec
        LEFT JOIN identified_risks r ON rec.identified_risk_id = r.id
        WHERE rec.assessment_id = $1

@@ -196,7 +196,7 @@ export default function Reports() {
           <div className="space-y-4">
             <h3 className="text-sm font-black uppercase tracking-wider text-primary border-b border-outline-variant pb-1 flex items-center gap-2">
               <Scale className="w-4 h-4 text-secondary" />
-              <span>2. 6-Category Deterministic Risk Distribution</span>
+              <span>2. 5-Category Deterministic Risk Distribution</span>
             </h3>
 
             <div className="overflow-x-auto">

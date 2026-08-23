@@ -6,37 +6,31 @@ const RISK_CATEGORIES = {
   FINANCIAL: {
     code: 'FINANCIAL',
     name: 'Financial Risk',
-    defaultWeight: 20.0,
+    defaultWeight: 25.0,
     description: 'Capital adequacy, liquidity stress, debt overhang, revenue contraction, and credit volatility.',
   },
   OPERATIONAL: {
     code: 'OPERATIONAL',
     name: 'Operational Risk',
-    defaultWeight: 20.0,
+    defaultWeight: 25.0,
     description: 'Internal process vulnerabilities, key-person dependency, supplier concentration, and business continuity.',
   },
   STRATEGIC: {
     code: 'STRATEGIC',
     name: 'Strategic Risk',
-    defaultWeight: 15.0,
+    defaultWeight: 20.0,
     description: 'Business model misalignment, expansion exposure, M&A integration, and competitive disruption.',
-  },
-  TECHNOLOGICAL: {
-    code: 'TECHNOLOGICAL',
-    name: 'Technological & Cyber Risk',
-    defaultWeight: 15.0,
-    description: 'Legacy architecture, cybersecurity controls, MFA coverage, data breach, and IT infrastructure dependencies.',
   },
   LEGAL_REGULATORY: {
     code: 'LEGAL_REGULATORY',
     name: 'Legal & Regulatory Risk',
-    defaultWeight: 10.0,
+    defaultWeight: 15.0,
     description: 'Statutory compliance, pending litigation, licensing status, data privacy standards, and regulatory penalties.',
   },
   MARKET: {
     code: 'MARKET',
     name: 'Market & Macro Risk',
-    defaultWeight: 20.0,
+    defaultWeight: 15.0,
     description: 'Customer concentration, commodity/FX volatility, inflation, interest rate sensitivity, and macro shifts.',
   },
 };
