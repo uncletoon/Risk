@@ -37,11 +37,11 @@ export default function AssessmentList() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'COMPLETED':
-        return 'bg-tertiary-container/20 text-on-tertiary-container border-tertiary-fixed-dim/40';
+        return 'bg-tertiary-container/20 text-on-tertiary-container border-tertiary-fixed-dim/40 font-bold';
       case 'FAILED':
-        return 'bg-error-container text-on-error-container border-error/30';
+        return 'bg-error-container text-on-error-container border-error/40 font-bold';
       default:
-        return 'bg-secondary-container/20 text-secondary border-secondary-container/40 animate-pulse';
+        return 'bg-secondary-container/20 text-secondary border-secondary-container/40 animate-pulse font-bold';
     }
   };
 
@@ -49,37 +49,39 @@ export default function AssessmentList() {
     switch (classification) {
       case 'Very Low':
       case 'Low':
-        return 'bg-tertiary-container/20 text-on-tertiary-container border-tertiary-fixed-dim/30';
+        return 'bg-tertiary-container/20 text-on-tertiary-container border-tertiary-fixed-dim/40 font-bold';
       case 'Moderate':
-        return 'bg-secondary/15 text-secondary border-secondary/30';
+        return 'bg-secondary/15 text-secondary border-secondary/30 font-bold';
       case 'High':
       case 'Critical':
       default:
-        return 'bg-error-container text-on-error-container border-error/30';
+        return 'bg-error-container text-on-error-container border-error/40 font-bold';
     }
   };
 
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <FileSpreadsheet className="w-4 h-4 text-secondary" />
-            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-primary">
               Enterprise Risk Governance
             </span>
           </div>
-          <h1 className="text-xl font-bold text-primary">Assessments Repository</h1>
-          <p className="text-xs text-on-surface-variant">
+          <h1 className="text-xl sm:text-2xl font-black text-primary tracking-tight">
+            Assessments Repository
+          </h1>
+          <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
             Historical and active single-document enterprise risk assessments.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
             onClick={fetchAssessments}
-            className="p-2.5 rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-high text-primary transition-colors cursor-pointer"
             title="Refresh List"
           >
             <RefreshCw className="w-4 h-4" />
@@ -87,7 +89,7 @@ export default function AssessmentList() {
 
           <Link
             to="/assessments/new"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 shadow-sm transition-all"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 shadow-sm transition-all"
           >
             <FilePlus2 className="w-4 h-4" />
             <span>New Assessment</span>
@@ -98,19 +100,19 @@ export default function AssessmentList() {
       {/* Assessments Table */}
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-xs font-semibold text-on-surface-variant">
+          <div className="p-12 text-center text-xs font-bold text-primary">
             Loading assessment repository...
           </div>
         ) : assessments.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <FileSpreadsheet className="w-10 h-10 mx-auto text-outline opacity-50" />
+            <FileSpreadsheet className="w-10 h-10 mx-auto text-secondary opacity-60" />
             <p className="text-sm font-bold text-primary">No risk assessments found</p>
-            <p className="text-xs text-on-surface-variant">
+            <p className="text-xs font-medium text-on-surface-variant">
               Upload a business document to initiate your organization's first assessment.
             </p>
             <Link
               to="/assessments/new"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold mt-2"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold mt-2"
             >
               <FilePlus2 className="w-4 h-4" />
               <span>Create New Assessment</span>
@@ -118,9 +120,9 @@ export default function AssessmentList() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-xs min-w-[700px]">
               <thead>
-                <tr className="border-b border-outline-variant/60 bg-surface-container-low text-[11px] uppercase tracking-wider text-on-surface-variant">
+                <tr className="border-b border-outline-variant bg-surface-container-low text-xs uppercase tracking-wider text-primary font-black">
                   <th className="py-3.5 px-6 font-bold">Assessment / Organization</th>
                   <th className="py-3.5 px-4 font-bold">Single Document</th>
                   <th className="py-3.5 px-4 font-bold">Status</th>
@@ -130,52 +132,52 @@ export default function AssessmentList() {
                   <th className="py-3.5 px-6 font-bold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/30">
+              <tbody className="divide-y divide-outline-variant/40">
                 {assessments.map((a) => (
                   <tr key={a.id} className="hover:bg-surface-container-low transition-colors">
                     <td className="py-4 px-6">
                       <p className="font-bold text-primary text-sm">{a.title}</p>
-                      <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant mt-0.5">
-                        <Building2 className="w-3 h-3" />
+                      <div className="flex items-center gap-1.5 text-xs text-on-surface-variant font-medium mt-0.5">
+                        <Building2 className="w-3.5 h-3.5 text-secondary" />
                         <span>{a.org_name || 'Enterprise'}</span>
                       </div>
                     </td>
 
-                    <td className="py-4 px-4 font-medium text-on-surface">
+                    <td className="py-4 px-4 font-semibold text-primary">
                       <div className="truncate max-w-[180px]" title={a.document_name || 'No document'}>
                         {a.document_name || 'Pending Upload'}
                       </div>
                       {a.file_size && (
-                        <span className="text-[10px] text-on-surface-variant">
+                        <span className="text-[11px] font-medium text-on-surface-variant block mt-0.5">
                           {(a.file_size / 1024).toFixed(1)} KB
                         </span>
                       )}
                     </td>
 
                     <td className="py-4 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadge(a.status)}`}>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${getStatusBadge(a.status)}`}>
                         {a.status}
                       </span>
                     </td>
 
-                    <td className="py-4 px-4 font-extrabold text-primary text-sm">
+                    <td className="py-4 px-4 font-black text-primary text-sm">
                       {a.overall_eri !== undefined && a.overall_eri !== null ? Number(a.overall_eri).toFixed(1) : '--'}
-                      <span className="text-[10px] font-normal text-on-surface-variant"> / 100</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant"> / 100</span>
                     </td>
 
                     <td className="py-4 px-4">
                       {a.eri_classification ? (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getEriBadgeBg(a.eri_classification)}`}>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getEriBadgeBg(a.eri_classification)}`}>
                           {a.eri_classification}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-on-surface-variant">--</span>
+                        <span className="text-xs font-semibold text-on-surface-variant">--</span>
                       )}
                     </td>
 
-                    <td className="py-4 px-4 text-on-surface-variant">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                    <td className="py-4 px-4 text-on-surface font-semibold text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-secondary" />
                         <span>{new Date(a.created_at).toLocaleDateString()}</span>
                       </div>
                     </td>
@@ -184,7 +186,7 @@ export default function AssessmentList() {
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/assessments/${a.id}`}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-bold text-on-surface transition-colors"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-bold text-primary transition-colors"
                         >
                           <span>Open Desk</span>
                           <ChevronRight className="w-3.5 h-3.5" />

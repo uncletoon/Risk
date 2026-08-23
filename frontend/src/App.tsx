@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/layout/Sidebar';
@@ -24,17 +24,22 @@ import SystemHealth from './pages/admin/SystemHealth';
 
 function ProtectedLayout({ children, title }: { children: React.ReactNode; title: string }) {
   const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-background font-body-md text-body-md text-on-background antialiased flex">
-      <Sidebar />
-      <div className="flex-1 ml-[280px] flex flex-col min-h-screen">
-        <TopNavbar title={title} />
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="min-h-screen bg-background font-body-md text-body-md text-on-background antialiased flex flex-col lg:flex-row">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 lg:ml-[280px] flex flex-col min-h-screen min-w-0 w-full">
+        <TopNavbar
+          title={title}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          isSidebarOpen={sidebarOpen}
+        />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
           {children}
         </main>
       </div>
@@ -43,13 +48,13 @@ function ProtectedLayout({ children, title }: { children: React.ReactNode; title
 }
 
 function AppRoutes() {
-  const { user, isSystemAdmin } = useAuth();
+  const { user } = useAuth();
 
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
 
-      {/* Main Dashboard for both roles */}
+      {/* Main Dashboard */}
       <Route
         path="/dashboard"
         element={

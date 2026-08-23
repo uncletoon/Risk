@@ -24,7 +24,6 @@ export default function OrganizationProfile() {
       setLoading(true);
       const orgs = await api.getOrganizations();
       if (orgs.length > 0) {
-        // Use user's organization or first active organization
         const currentOrg = orgs.find(o => o.id === user?.organization_id) || orgs[0];
         setOrg(currentOrg);
         setName(currentOrg.name);
@@ -46,7 +45,6 @@ export default function OrganizationProfile() {
       setSaving(true);
       setSuccessMsg(null);
       
-      // Update existing organization (does not create duplicate)
       const updated = await api.updateOrganization(org.id, {
         name,
         industry,
@@ -57,7 +55,6 @@ export default function OrganizationProfile() {
       setOrg(updated);
       setSuccessMsg('Organization profile updated and renamed successfully.');
       
-      // Update local storage user organization name if present
       const savedUser = localStorage.getItem('eridss_user');
       if (savedUser) {
         const u = JSON.parse(savedUser);
@@ -75,7 +72,7 @@ export default function OrganizationProfile() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] text-xs text-on-surface-variant font-semibold">
+      <div className="flex items-center justify-center min-h-[300px] text-xs font-bold text-primary">
         Loading organization profile...
       </div>
     );
@@ -83,14 +80,14 @@ export default function OrganizationProfile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-xs">
+      <div className="bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-primary">Enterprise Organization Profile</h1>
-            <p className="text-xs text-on-surface-variant">
+            <h1 className="text-xl sm:text-2xl font-black text-primary">Enterprise Organization Profile</h1>
+            <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
               Manage your business profile details used by Gemini AI during document extraction and risk contextualization.
             </p>
           </div>
@@ -98,15 +95,15 @@ export default function OrganizationProfile() {
       </div>
 
       {successMsg && (
-        <div className="p-4 rounded-xl bg-tertiary-container/20 text-on-tertiary-container text-xs font-semibold flex items-center gap-2 border border-tertiary-fixed-dim/40">
+        <div className="p-4 rounded-xl bg-tertiary-container/20 text-on-tertiary-container text-xs font-bold flex items-center gap-2 border border-tertiary-fixed-dim/40">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
-      <form onSubmit={handleSave} className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-xs space-y-5">
+      <form onSubmit={handleSave} className="bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant shadow-xs space-y-5">
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+          <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
             Organization Legal / Trade Name
           </label>
           <input
@@ -114,14 +111,14 @@ export default function OrganizationProfile() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="e.g. RWANDA KABUHARIWE"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+            <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
               Industry Sector
             </label>
             <input
@@ -129,27 +126,27 @@ export default function OrganizationProfile() {
               required
               value={industry}
               onChange={(e) => setIndustry(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="e.g. Financial & Enterprise Services"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+            <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
               Risk & Compliance Contact Email
             </label>
             <input
               type="email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="e.g. risk@enterprise.rw"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+          <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
             Operational Scope & Business Description
           </label>
           <textarea
@@ -161,11 +158,11 @@ export default function OrganizationProfile() {
           />
         </div>
 
-        <div className="flex justify-end pt-3 border-t border-outline-variant/60">
+        <div className="flex justify-end pt-3 border-t border-outline-variant">
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-all cursor-pointer shadow-sm"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-all cursor-pointer shadow-sm"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? 'Updating Profile...' : 'Save Organization Profile'}</span>

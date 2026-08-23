@@ -1,9 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ChevronDown, Building2, User } from 'lucide-react';
+import { LogOut, ChevronDown, Menu, X } from 'lucide-react';
 
-export default function TopNavbar({ title }: { title: string }) {
+interface TopNavbarProps {
+  title: string;
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
+}
+
+export default function TopNavbar({ title, onToggleSidebar, isSidebarOpen }: TopNavbarProps) {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -60,37 +66,48 @@ export default function TopNavbar({ title }: { title: string }) {
   };
 
   return (
-    <header className="flex justify-between items-center h-16 px-6 bg-surface-bright border-b border-outline-variant shadow-xs sticky top-0 z-20 w-full">
-      <div className="flex items-center gap-3">
-        <h2 className="text-xl font-bold text-primary tracking-tight">
-          {title}
-        </h2>
-        <span
-          className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleInfo.bg}`}
+    <header className="flex justify-between items-center h-16 px-4 sm:px-6 bg-surface-bright border-b border-outline-variant shadow-xs sticky top-0 z-20 w-full">
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Mobile Hamburger Menu Toggle */}
+        <button
+          onClick={onToggleSidebar}
+          className="lg:hidden p-2 rounded-xl text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0"
+          aria-label="Toggle navigation menu"
         >
-          {roleInfo.label}
-        </span>
+          {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+
+        <div className="flex items-center gap-2.5 min-w-0">
+          <h2 className="text-base sm:text-lg lg:text-xl font-extrabold text-primary tracking-tight truncate">
+            {title}
+          </h2>
+          <span
+            className={`hidden sm:inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${roleInfo.bg}`}
+          >
+            {roleInfo.label}
+          </span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 shrink-0">
         {/* User Profile Menu */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-3 pl-3 border-l border-outline-variant hover:opacity-85 transition-opacity text-left cursor-pointer focus:outline-none"
+            className="flex items-center gap-2.5 sm:gap-3 pl-2 sm:pl-3 border-l border-outline-variant hover:opacity-85 transition-opacity text-left cursor-pointer focus:outline-none"
           >
             <div className="text-right hidden md:block">
               <p className="text-xs font-bold text-on-surface leading-tight">
                 {user?.full_name || 'User'}
               </p>
-              <p className="text-[11px] text-on-surface-variant leading-tight mt-0.5 truncate max-w-[180px]">
+              <p className="text-[11px] font-medium text-on-surface-variant leading-tight mt-0.5 truncate max-w-[160px]">
                 {user?.organization_name || user?.department || 'Enterprise Risk'}
               </p>
             </div>
             <div className="w-9 h-9 rounded-full border border-outline-variant bg-primary-container flex items-center justify-center text-on-primary text-xs font-bold shadow-xs">
               {getInitials(user?.full_name)}
             </div>
-            <ChevronDown className="w-4 h-4 text-on-surface-variant" />
+            <ChevronDown className="w-4 h-4 text-on-surface-variant shrink-0" />
           </button>
 
           {/* User Profile Dropdown */}
@@ -100,11 +117,11 @@ export default function TopNavbar({ title }: { title: string }) {
                 <p className="text-xs font-bold text-on-surface">
                   {user?.full_name}
                 </p>
-                <p className="text-[11px] text-on-surface-variant truncate">
+                <p className="text-[11px] font-medium text-on-surface-variant truncate mt-0.5">
                   {user?.email}
                 </p>
                 <span
-                  className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border mt-1.5 ${roleInfo.bg}`}
+                  className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border mt-2 ${roleInfo.bg}`}
                 >
                   {roleInfo.label}
                 </span>
@@ -114,7 +131,7 @@ export default function TopNavbar({ title }: { title: string }) {
               <div className="pt-1">
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-error hover:bg-error-container/20 transition-colors flex items-center gap-2 cursor-pointer"
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-error hover:bg-error-container/20 transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sign Out</span>

@@ -55,23 +55,23 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6 pb-16">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-4 h-4 text-secondary" />
-            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-primary">
               System Administration
             </span>
           </div>
-          <h1 className="text-xl font-bold text-primary">Staff User Accounts</h1>
-          <p className="text-xs text-on-surface-variant">
+          <h1 className="text-xl sm:text-2xl font-black text-primary tracking-tight">Staff User Accounts</h1>
+          <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
             Manage user roles (SYSTEM_ADMIN, RISK_OFFICER), corporate credentials, and organizational access.
           </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Add User Account</span>
@@ -80,28 +80,28 @@ export default function UserManagement() {
 
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-xs font-semibold text-on-surface-variant">Loading user directory...</div>
+          <div className="p-12 text-center text-xs font-bold text-primary">Loading user directory...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[650px]">
               <thead>
-                <tr className="border-b border-outline-variant bg-surface-container-low text-[11px] uppercase tracking-wider text-on-surface-variant">
-                  <th className="py-3 px-6 font-bold">User</th>
-                  <th className="py-3 px-4 font-bold">Corporate Email</th>
-                  <th className="py-3 px-4 font-bold">Role</th>
-                  <th className="py-3 px-4 font-bold">Department</th>
-                  <th className="py-3 px-4 font-bold">Status</th>
-                  <th className="py-3 px-6 font-bold">Created Date</th>
+                <tr className="border-b border-outline-variant bg-surface-container-low text-xs uppercase tracking-wider text-primary font-black">
+                  <th className="py-3.5 px-6 font-bold">User</th>
+                  <th className="py-3.5 px-4 font-bold">Corporate Email</th>
+                  <th className="py-3.5 px-4 font-bold">Role</th>
+                  <th className="py-3.5 px-4 font-bold">Department</th>
+                  <th className="py-3.5 px-4 font-bold">Status</th>
+                  <th className="py-3.5 px-6 font-bold">Created Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/30">
+              <tbody className="divide-y divide-outline-variant/40">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-surface-container-low">
+                  <tr key={u.id} className="hover:bg-surface-container-low transition-colors">
                     <td className="py-4 px-6 font-bold text-primary">{u.full_name}</td>
-                    <td className="py-4 px-4 text-on-surface font-medium">{u.email}</td>
+                    <td className="py-4 px-4 text-primary font-semibold">{u.email}</td>
                     <td className="py-4 px-4">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
                           u.role === 'SYSTEM_ADMIN'
                             ? 'bg-primary-container/20 text-primary border-primary-container/40'
                             : 'bg-secondary-container/20 text-secondary border-secondary-container/40'
@@ -110,13 +110,13 @@ export default function UserManagement() {
                         {u.role}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-on-surface-variant">{u.department}</td>
+                    <td className="py-4 px-4 text-on-surface font-medium">{u.department}</td>
                     <td className="py-4 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary-container/20 text-on-tertiary-container border border-tertiary-fixed-dim/30">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-black bg-tertiary-container/20 text-on-tertiary-container border border-tertiary-fixed-dim/40">
                         {u.status}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-on-surface-variant">
+                    <td className="py-4 px-6 text-on-surface-variant font-medium">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
                   </tr>
@@ -129,18 +129,18 @@ export default function UserManagement() {
 
       {/* Add User Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start">
               <h3 className="text-base font-bold text-primary">Provision New User Account</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-outline hover:text-on-surface text-lg cursor-pointer">
+              <button onClick={() => setIsModalOpen(false)} className="text-primary hover:text-error text-lg cursor-pointer font-bold">
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                <label className="block font-bold text-primary mb-1 uppercase tracking-wider">
                   Full Name
                 </label>
                 <input
@@ -148,12 +148,12 @@ export default function UserManagement() {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
+                  className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                <label className="block font-bold text-primary mb-1 uppercase tracking-wider">
                   Corporate Email
                 </label>
                 <input
@@ -161,12 +161,12 @@ export default function UserManagement() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
+                  className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                <label className="block font-bold text-primary mb-1 uppercase tracking-wider">
                   Initial Password
                 </label>
                 <input
@@ -174,19 +174,19 @@ export default function UserManagement() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
+                  className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                  <label className="block font-bold text-primary mb-1 uppercase tracking-wider">
                     Role
                   </label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
+                    className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="RISK_OFFICER">RISK_OFFICER</option>
                     <option value="SYSTEM_ADMIN">SYSTEM_ADMIN</option>
@@ -194,14 +194,14 @@ export default function UserManagement() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+                  <label className="block font-bold text-primary mb-1 uppercase tracking-wider">
                     Department
                   </label>
                   <input
                     type="text"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface"
+                    className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -210,14 +210,14 @@ export default function UserManagement() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-surface-container font-bold text-on-surface cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-container font-bold text-primary cursor-pointer hover:bg-surface-container-high"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-primary text-on-primary font-bold hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-primary text-on-primary font-bold hover:bg-primary/90 disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   {saving ? 'Creating...' : 'Create Account'}
                 </button>

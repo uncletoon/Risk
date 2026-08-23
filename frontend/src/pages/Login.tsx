@@ -19,20 +19,20 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-on-surface">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center px-4">
         <div className="w-14 h-14 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center mx-auto shadow-lg mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-3xl font-bold tracking-tight text-primary">ERIDSS</h2>
-        <p className="mt-1 text-sm text-on-surface-variant font-medium">
+        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-primary">ERIDSS</h2>
+        <p className="mt-1 text-xs sm:text-sm text-on-surface-variant font-bold">
           Enterprise Risk Intelligence and Decision Support System
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-surface-container-lowest py-8 px-6 shadow-xl rounded-2xl sm:px-10 border border-outline-variant/50">
+        <div className="bg-surface-container-lowest py-8 px-6 shadow-xl rounded-2xl sm:px-10 border border-outline-variant">
           {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-error-container text-on-error-container text-xs font-semibold flex items-center gap-2 border border-error/20">
+            <div className="mb-5 p-3.5 rounded-xl bg-error-container text-on-error-container text-xs font-bold flex items-center gap-2 border border-error/40">
               <ShieldAlert className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -40,11 +40,11 @@ export default function Login() {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+              <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
                 Corporate Email Address
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-primary">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -52,18 +52,18 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-semibold text-primary placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   placeholder="name@enterprise.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+              <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
                 Security Password
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-primary">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -71,7 +71,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-semibold text-primary placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   placeholder="••••••••"
                 />
               </div>
@@ -94,15 +94,15 @@ export default function Login() {
           </form>
 
           {/* Quick Demo Role Selector */}
-          <div className="mt-8 pt-6 border-t border-outline-variant/40">
-            <p className="text-[11px] uppercase tracking-wider font-bold text-on-surface-variant text-center mb-3">
+          <div className="mt-8 pt-6 border-t border-outline-variant">
+            <p className="text-[11px] uppercase tracking-wider font-extrabold text-primary text-center mb-3">
               Fast Demo Credential Switcher
             </p>
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => handleQuickLogin('officer@eridss.com', 'Officer@123')}
-                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-on-surface transition-colors cursor-pointer"
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-primary transition-colors cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-secondary" />
                 <span>Risk Officer</span>
@@ -111,7 +111,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin@eridss.com', 'Admin@123')}
-                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-on-surface transition-colors cursor-pointer"
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-primary transition-colors cursor-pointer"
               >
                 <UserCheck className="w-3.5 h-3.5 text-primary" />
                 <span>System Admin</span>
