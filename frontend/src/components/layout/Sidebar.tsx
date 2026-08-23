@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
 import {
   LayoutDashboard,
   Building2,
@@ -14,12 +15,30 @@ import {
   Scale,
   Activity,
   HeartPulse,
-  LogOut,
   ShieldCheck,
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { user, isSystemAdmin, logout } = useAuth();
+  const { user, isSystemAdmin } = useAuth();
+  const [orgName, setOrgName] = useState(user?.organization_name || 'RWANDA KABUHARIWE');
+  const [orgIndustry, setOrgIndustry] = useState('Financial & Enterprise Services');
+
+  useEffect(() => {
+    // Fetch active organization details to show at the bottom
+    const loadOrg = async () => {
+      try {
+        const orgs = await api.getOrganizations();
+        if (orgs.length > 0) {
+          const matched = orgs.find(o => o.id === user?.organization_id) || orgs[0];
+          setOrgName(matched.name);
+          setOrgIndustry(matched.industry || 'Financial & Enterprise Services');
+        }
+      } catch (err) {
+        // fallback to user data
+      }
+    };
+    loadOrg();
+  }, [user]);
 
   return (
     <nav className="fixed left-0 top-0 h-full flex flex-col py-5 bg-primary-container w-[280px] z-30 shadow-2xl border-r border-outline-variant/10 text-on-primary">
@@ -71,20 +90,6 @@ export default function Sidebar() {
         {!isSystemAdmin && (
           <>
             <NavLink
-              to="/organization"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                  isActive
-                    ? 'text-secondary-container bg-surface-container-highest/20 font-bold shadow-xs'
-                    : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/10'
-                }`
-              }
-            >
-              <Building2 className="w-4 h-4" />
-              <span>Organization Profile</span>
-            </NavLink>
-
-            <NavLink
               to="/assessments/new"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
@@ -100,6 +105,7 @@ export default function Sidebar() {
 
             <NavLink
               to="/assessments"
+              end
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   isActive
@@ -236,24 +242,30 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* User Profile & Logout Footer */}
-      <div className="px-4 pt-4 border-t border-outline-variant/20 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs shrink-0">
-            {user?.full_name?.charAt(0) || 'U'}
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-surface-container-lowest truncate">{user?.full_name || 'User'}</p>
-            <p className="text-[10px] text-on-primary-container truncate">{user?.department || 'Risk Governance'}</p>
-          </div>
-        </div>
-        <button
-          onClick={logout}
-          title="Sign out"
-          className="p-1.5 rounded-lg text-on-primary-container hover:text-error-container hover:bg-error/20 transition-colors"
+      {/* Bottom Organization Profile Link */}
+      <div className="px-3 pt-3 border-t border-outline-variant/20">
+        <NavLink
+          to="/organization"
+          className={({ isActive }) =>
+            `flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+              isActive
+                ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
+                : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/10'
+            }`
+          }
         >
-          <LogOut className="w-4 h-4" />
-        </button>
+          <div className="w-9 h-9 rounded-xl bg-surface-container-highest/20 text-secondary flex items-center justify-center font-bold text-xs shrink-0 border border-outline-variant/30">
+            <Building2 className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-surface-container-lowest truncate leading-tight" title={orgName}>
+              {orgName}
+            </p>
+            <p className="text-[10px] text-on-primary-container truncate mt-0.5" title={orgIndustry}>
+              {orgIndustry}
+            </p>
+          </div>
+        </NavLink>
       </div>
     </nav>
   );

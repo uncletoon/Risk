@@ -5,23 +5,33 @@
 const { pool } = require('../config/db');
 
 async function getDashboardMetrics(organizationId = null) {
-  let filter = '';
   const params = [];
   if (organizationId) {
-    filter = 'WHERE organization_id = $1';
     params.push(organizationId);
   }
 
-  // 1. Fetch Latest Completed Assessment
-  const latestRes = await pool.query(
+  // 1. Fetch Latest Completed Assessment (scoped to org, fallback to latest overall)
+  let latestRes = await pool.query(
     `SELECT a.*, o.name as org_name
      FROM assessments a
      JOIN organizations o ON a.organization_id = o.id
-     ${filter ? 'WHERE a.organization_id = $1 AND a.status = \'COMPLETED\'' : 'WHERE a.status = \'COMPLETED\''}
+     ${organizationId ? 'WHERE a.organization_id = $1 AND a.status = \'COMPLETED\'' : 'WHERE a.status = \'COMPLETED\''}
      ORDER BY a.completed_at DESC NULLS LAST, a.created_at DESC
      LIMIT 1`,
     params
   );
+
+  if (latestRes.rows.length === 0 && organizationId) {
+    // Fallback without org filter if none under this specific orgId
+    latestRes = await pool.query(
+      `SELECT a.*, o.name as org_name
+       FROM assessments a
+       JOIN organizations o ON a.organization_id = o.id
+       WHERE a.status = 'COMPLETED'
+       ORDER BY a.completed_at DESC NULLS LAST, a.created_at DESC
+       LIMIT 1`
+    );
+  }
 
   const latestAssessment = latestRes.rows[0] || null;
 
@@ -52,29 +62,38 @@ async function getDashboardMetrics(organizationId = null) {
   }
 
   // 3. Mitigation Stats
-  const mitFilter = organizationId ? 'JOIN assessments a ON m.assessment_id = a.id WHERE a.organization_id = $1' : '';
   const mitRes = await pool.query(
     `SELECT 
        COUNT(*) as total_actions,
        COUNT(*) FILTER (WHERE m.status = 'PENDING') as pending_count,
        COUNT(*) FILTER (WHERE m.status = 'IN_PROGRESS') as in_progress_count,
        COUNT(*) FILTER (WHERE m.status = 'COMPLETED') as completed_count,
-       COALESCE(AVG(m.progress_pct), 0) as avg_progress
+       COALESCE(AVG(m.progress_pct), 0) as average_progress
      FROM mitigation_actions m
-     ${mitFilter}`,
+     ${organizationId ? 'JOIN assessments a ON m.assessment_id = a.id WHERE a.organization_id = $1' : ''}`,
     params
   );
 
   // 4. Longitudinal History / Trend
-  const histFilter = organizationId ? 'WHERE organization_id = $1' : '';
   const histRes = await pool.query(
     `SELECT id, assessment_id, version_label, overall_eri, eri_classification, snapshot_date
      FROM assessment_history
-     ${histFilter}
+     ${organizationId ? 'WHERE organization_id = $1' : ''}
      ORDER BY snapshot_date ASC
      LIMIT 10`,
     params
   );
+
+  let historyTrend = histRes.rows;
+  if (historyTrend.length === 0) {
+    const allHist = await pool.query(
+      `SELECT id, assessment_id, version_label, overall_eri, eri_classification, snapshot_date
+       FROM assessment_history
+       ORDER BY snapshot_date ASC
+       LIMIT 10`
+    );
+    historyTrend = allHist.rows;
+  }
 
   // 5. Total Assessments count
   const countRes = await pool.query(
@@ -83,7 +102,7 @@ async function getDashboardMetrics(organizationId = null) {
        COUNT(*) FILTER (WHERE status = 'COMPLETED') as completed_count,
        COUNT(*) FILTER (WHERE status = 'PROCESSING' OR status = 'EXTRACTING' OR status = 'ASSESSING' OR status = 'ANALYZING') as active_processing_count
      FROM assessments
-     ${filter}`,
+     ${organizationId ? 'WHERE organization_id = $1' : ''}`,
     params
   );
 
@@ -92,7 +111,7 @@ async function getDashboardMetrics(organizationId = null) {
     categoryScores,
     topRisks,
     mitigationStats: mitRes.rows[0] || {},
-    historyTrend: histRes.rows || [],
+    historyTrend: historyTrend || [],
     assessmentStats: countRes.rows[0] || {},
   };
 }

@@ -264,6 +264,15 @@ export const api = {
     return handleResponse<any>(res);
   },
 
+  updateOrganization: async (id: number, data: { name?: string; industry?: string; description?: string; contact_email?: string }) => {
+    const res = await fetch(`/api/organizations/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
   // Admin Endpoints
   getAdminUsers: async () => {
     const res = await fetch('/api/admin/users', { headers: getAuthHeader() });

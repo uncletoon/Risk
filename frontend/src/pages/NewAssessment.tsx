@@ -5,13 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import {
   FilePlus2,
   UploadCloud,
-  FileSpreadsheet,
-  FileType,
-  AlertCircle,
   CheckCircle2,
-  ShieldAlert,
+  AlertCircle,
   ArrowRight,
   Info,
+  Building2,
 } from 'lucide-react';
 
 export default function NewAssessment() {
@@ -35,7 +33,9 @@ export default function NewAssessment() {
     try {
       const orgs = await api.getOrganizations();
       setOrganizations(orgs);
-      if (orgs.length > 0 && !user?.organization_id) {
+      if (user?.organization_id && orgs.some(o => o.id === user.organization_id)) {
+        setSelectedOrgId(user.organization_id);
+      } else if (orgs.length > 0) {
         setSelectedOrgId(orgs[0].id);
       }
     } catch (err) {
@@ -106,7 +106,7 @@ export default function NewAssessment() {
       // Step 1: Create Assessment Container
       setStatusMessage('Creating assessment session in database...');
       const assessment = await api.createAssessment({
-        organizationId: selectedOrgId,
+        organizationId: selectedOrgId || 1,
         title: title || 'Comprehensive Enterprise Risk Assessment',
       });
 
@@ -114,7 +114,7 @@ export default function NewAssessment() {
       setStatusMessage('Uploading and validating document metadata...');
       await api.uploadDocument(assessment.id, file);
 
-      // Step 3: Trigger Processing Pipeline
+      // Step 3: Trigger Processing Pipeline in background
       setStatusMessage('Executing Gemini extraction and deterministic risk scoring...');
       api.processAssessment(assessment.id).catch(err => {
         console.warn('Background pipeline error (will be reflected in assessment state):', err);
@@ -128,6 +128,8 @@ export default function NewAssessment() {
       setLoading(false);
     }
   };
+
+  const activeOrg = organizations.find(o => o.id === selectedOrgId) || organizations[0];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
@@ -171,17 +173,24 @@ export default function NewAssessment() {
             <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
               Organization
             </label>
-            <select
-              value={selectedOrgId}
-              onChange={(e) => setSelectedOrgId(Number(e.target.value))}
-              className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-            >
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name} ({org.industry})
-                </option>
-              ))}
-            </select>
+            {organizations.length > 1 ? (
+              <select
+                value={selectedOrgId}
+                onChange={(e) => setSelectedOrgId(Number(e.target.value))}
+                className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              >
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name} ({org.industry})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-bold text-primary">
+                <Building2 className="w-4 h-4 text-secondary" />
+                <span>{activeOrg?.name || 'RWANDA KABUHARIWE'} ({activeOrg?.industry || 'Financial & Enterprise Services'})</span>
+              </div>
+            )}
           </div>
 
           <div>

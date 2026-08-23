@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Building2, Save, CheckCircle2, ShieldCheck, Mail, Globe, Layers } from 'lucide-react';
+import { Building2, Save, CheckCircle2 } from 'lucide-react';
 
 export default function OrganizationProfile() {
   const { user } = useAuth();
@@ -24,7 +24,8 @@ export default function OrganizationProfile() {
       setLoading(true);
       const orgs = await api.getOrganizations();
       if (orgs.length > 0) {
-        const currentOrg = orgs[0];
+        // Use user's organization or first active organization
+        const currentOrg = orgs.find(o => o.id === user?.organization_id) || orgs[0];
         setOrg(currentOrg);
         setName(currentOrg.name);
         setIndustry(currentOrg.industry || 'Financial & Enterprise Services');
@@ -44,17 +45,29 @@ export default function OrganizationProfile() {
     try {
       setSaving(true);
       setSuccessMsg(null);
-      const updated = await api.createOrganization({
+      
+      // Update existing organization (does not create duplicate)
+      const updated = await api.updateOrganization(org.id, {
         name,
         industry,
         description,
         contact_email: contactEmail,
       });
+
       setOrg(updated);
-      setSuccessMsg('Organization profile updated successfully.');
+      setSuccessMsg('Organization profile updated and renamed successfully.');
+      
+      // Update local storage user organization name if present
+      const savedUser = localStorage.getItem('eridss_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        u.organization_name = updated.name;
+        localStorage.setItem('eridss_user', JSON.stringify(u));
+      }
+
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
-      alert(`Error updating profile: ${err.message}`);
+      alert(`Error updating organization profile: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -76,9 +89,9 @@ export default function OrganizationProfile() {
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-primary">Enterprise Profile & Scope</h1>
+            <h1 className="text-xl font-bold text-primary">Enterprise Organization Profile</h1>
             <p className="text-xs text-on-surface-variant">
-              Manage organization parameters used by Gemini AI during document extraction and risk contextualization.
+              Manage your business profile details used by Gemini AI during document extraction and risk contextualization.
             </p>
           </div>
         </div>
@@ -94,7 +107,7 @@ export default function OrganizationProfile() {
       <form onSubmit={handleSave} className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-xs space-y-5">
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-            Organization Legal Name
+            Organization Legal / Trade Name
           </label>
           <input
             type="text"
@@ -102,6 +115,7 @@ export default function OrganizationProfile() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="e.g. RWANDA KABUHARIWE"
           />
         </div>
 
@@ -116,6 +130,7 @@ export default function OrganizationProfile() {
               value={industry}
               onChange={(e) => setIndustry(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="e.g. Financial & Enterprise Services"
             />
           </div>
 
@@ -128,6 +143,7 @@ export default function OrganizationProfile() {
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="e.g. risk@enterprise.rw"
             />
           </div>
         </div>
@@ -141,7 +157,7 @@ export default function OrganizationProfile() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Describe lines of business, digital infrastructure, regulatory boundaries, and key customer segments..."
+            placeholder="Describe lines of business, digital infrastructure, operational models, and key risk boundaries..."
           />
         </div>
 
@@ -149,10 +165,10 @@ export default function OrganizationProfile() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-all cursor-pointer shadow-sm"
           >
             <Save className="w-4 h-4" />
-            <span>{saving ? 'Saving Profile...' : 'Save Organization Profile'}</span>
+            <span>{saving ? 'Updating Profile...' : 'Save Organization Profile'}</span>
           </button>
         </div>
       </form>

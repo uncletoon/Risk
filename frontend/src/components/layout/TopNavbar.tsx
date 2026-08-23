@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, ChevronDown, Building2, User } from 'lucide-react';
 
 export default function TopNavbar({ title }: { title: string }) {
   const { user, logout } = useAuth();
@@ -17,46 +18,45 @@ export default function TopNavbar({ title }: { title: string }) {
         setDropdownOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const getInitials = (name?: string) => {
-    if (!name) return "U";
+    if (!name) return 'U';
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
       .slice(0, 2);
   };
 
   const getRoleBadge = (role?: string) => {
-    switch (role) {
-      case "risk_officer":
-        return {
-          label: "Risk Officer",
-          bg: "bg-secondary/15 text-secondary border-secondary/30",
-        };
-      case "employee":
-        return {
-          label: "Loan Officer",
-          bg: "bg-tertiary-container/10 text-on-tertiary-container border-tertiary-fixed-dim/40",
-        };
-      case "admin":
-      default:
-        return {
-          label: "System Admin",
-          bg: "bg-primary-container/10 text-primary-container border-primary-container/30",
-        };
+    const r = (role || '').toUpperCase();
+    if (r === 'RISK_OFFICER' || r === 'OFFICER' || r === 'EMPLOYEE') {
+      return {
+        label: 'Risk Officer',
+        bg: 'bg-secondary/15 text-secondary border-secondary/30',
+      };
     }
+    if (r === 'SYSTEM_ADMIN' || r === 'ADMIN') {
+      return {
+        label: 'System Admin',
+        bg: 'bg-primary-container/10 text-primary border-primary-container/30',
+      };
+    }
+    return {
+      label: 'Risk Officer',
+      bg: 'bg-secondary/15 text-secondary border-secondary/30',
+    };
   };
 
   const roleInfo = getRoleBadge(user?.role);
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate('/login');
   };
 
   return (
@@ -73,7 +73,7 @@ export default function TopNavbar({ title }: { title: string }) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* User Profile & Independent Log Out Menu */}
+        {/* User Profile Menu */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -81,21 +81,19 @@ export default function TopNavbar({ title }: { title: string }) {
           >
             <div className="text-right hidden md:block">
               <p className="text-xs font-bold text-on-surface leading-tight">
-                {user?.full_name || "User"}
+                {user?.full_name || 'User'}
               </p>
-              <p className="text-[11px] text-on-surface-variant leading-tight mt-0.5 truncate max-w-[160px]">
-                {user?.department || "Department"}
+              <p className="text-[11px] text-on-surface-variant leading-tight mt-0.5 truncate max-w-[180px]">
+                {user?.organization_name || user?.department || 'Enterprise Risk'}
               </p>
             </div>
             <div className="w-9 h-9 rounded-full border border-outline-variant bg-primary-container flex items-center justify-center text-on-primary text-xs font-bold shadow-xs">
               {getInitials(user?.full_name)}
             </div>
-            <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
-              expand_more
-            </span>
+            <ChevronDown className="w-4 h-4 text-on-surface-variant" />
           </button>
 
-          {/* Clean User Profile Dropdown */}
+          {/* User Profile Dropdown */}
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-4 py-3 border-b border-outline-variant/60 bg-surface-container-low">
@@ -112,15 +110,13 @@ export default function TopNavbar({ title }: { title: string }) {
                 </span>
               </div>
 
-              {/* Independent Log Out Option */}
+              {/* Log Out Option */}
               <div className="pt-1">
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2.5 text-xs font-semibold text-error hover:bg-error-container/20 transition-colors flex items-center gap-2 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">
-                    logout
-                  </span>
+                  <LogOut className="w-4 h-4" />
                   <span>Sign Out</span>
                 </button>
               </div>
