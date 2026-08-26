@@ -21,6 +21,11 @@ coverage/
 .local-pg/
 .runtime/
 
+# Test scripts and temporary scratch files
+scripts/test_*.js
+scripts/test-*.js
+test_*.js
+
 # Logs and debug output
 *.log
 logs/

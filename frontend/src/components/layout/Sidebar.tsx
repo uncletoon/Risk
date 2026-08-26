@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { api } from '../../lib/api';
+import React, { useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../lib/api";
 import {
   LayoutDashboard,
   Building2,
@@ -16,8 +16,9 @@ import {
   Activity,
   HeartPulse,
   ShieldCheck,
+  User,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -26,17 +27,22 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, isSystemAdmin } = useAuth();
-  const [orgName, setOrgName] = useState(user?.organization_name || 'RWANDA KABUHARIWE');
-  const [orgIndustry, setOrgIndustry] = useState('Financial & Enterprise Services');
+  const [orgName, setOrgName] = useState(
+    user?.organization_name || "RWANDA KABUHARIWE",
+  );
+  const [orgIndustry, setOrgIndustry] = useState(
+    "Financial & Enterprise Services",
+  );
 
   useEffect(() => {
     const loadOrg = async () => {
       try {
         const orgs = await api.getOrganizations();
         if (orgs.length > 0) {
-          const matched = orgs.find(o => o.id === user?.organization_id) || orgs[0];
+          const matched =
+            orgs.find((o) => o.id === user?.organization_id) || orgs[0];
           setOrgName(matched.name);
-          setOrgIndustry(matched.industry || 'Financial & Enterprise Services');
+          setOrgIndustry(matched.industry || "Financial & Enterprise Services");
         }
       } catch (err) {
         // fallback
@@ -64,7 +70,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <nav
         className={`fixed left-0 top-0 h-full flex flex-col py-5 bg-primary-container w-[280px] z-40 shadow-2xl border-r border-outline-variant/10 text-on-primary transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand Header */}
@@ -74,7 +80,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <ShieldAlert className="w-6 h-6 text-on-secondary-container" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-wide leading-tight text-surface-container-lowest">ERIDSS</h1>
+              <h1 className="text-xl font-bold tracking-wide leading-tight text-surface-container-lowest">
+                ERIDSS
+              </h1>
               <p className="text-[10px] text-on-primary-container font-semibold tracking-wider uppercase">
                 Risk Intelligence & Decision
               </p>
@@ -95,9 +103,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="mx-4 mb-4 px-3.5 py-2.5 rounded-xl bg-surface-container-highest/15 border border-outline-variant/30 flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-tertiary-fixed-dim animate-pulse"></span>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase font-bold text-on-primary-container tracking-wider">Active Role</p>
+            <p className="text-[10px] uppercase font-bold text-on-primary-container tracking-wider">
+              Active Role
+            </p>
             <p className="text-[12px] font-bold text-surface-container-lowest truncate">
-              {isSystemAdmin ? 'System Administrator' : 'Chief Risk Officer'}
+              {isSystemAdmin ? "System Administrator" : "Chief Risk Officer"}
             </p>
           </div>
         </div>
@@ -114,8 +124,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 isActive
-                  ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                  : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                  ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                  : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
               }`
             }
           >
@@ -131,8 +141,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -147,8 +157,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -162,8 +172,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -177,8 +187,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -192,8 +202,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -216,8 +226,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -231,8 +241,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -246,8 +256,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -261,8 +271,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -276,8 +286,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs'
-                      : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
                   }`
                 }
               >
@@ -288,7 +298,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           )}
         </div>
 
-        {/* Bottom Organization Profile Link */}
+        {/* Bottom Profile / Organization Link */}
         <div className="px-3 pt-3 border-t border-outline-variant/20">
           <NavLink
             to="/organization"
@@ -296,20 +306,32 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             className={({ isActive }) =>
               `flex items-center gap-3 p-2.5 rounded-xl transition-all ${
                 isActive
-                  ? 'text-secondary-container bg-surface-container-highest/30 font-bold shadow-xs'
-                  : 'text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15'
+                  ? "text-secondary-container bg-surface-container-highest/30 font-bold shadow-xs"
+                  : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
               }`
             }
           >
             <div className="w-9 h-9 rounded-xl bg-surface-container-highest/25 text-secondary-container flex items-center justify-center font-bold text-xs shrink-0 border border-outline-variant/30">
-              <Building2 className="w-4 h-4" />
+              {isSystemAdmin ? (
+                <User className="w-4 h-4" />
+              ) : (
+                <Building2 className="w-4 h-4" />
+              )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-surface-container-lowest truncate leading-tight" title={orgName}>
-                {orgName}
+              <p
+                className="text-xs font-bold text-surface-container-lowest truncate leading-tight"
+                title={
+                  isSystemAdmin ? user?.full_name || "System Admin" : orgName
+                }
+              >
+                {isSystemAdmin ? user?.full_name || "System Admin" : orgName}
               </p>
-              <p className="text-[10px] text-on-primary-container font-medium truncate mt-0.5" title={orgIndustry}>
-                {orgIndustry}
+              <p
+                className="text-[10px] text-on-primary-container font-medium truncate mt-0.5"
+                title={isSystemAdmin ? "Administrator Account" : orgIndustry}
+              >
+                {isSystemAdmin ? "Admin Account Profile" : orgIndustry}
               </p>
             </div>
           </NavLink>

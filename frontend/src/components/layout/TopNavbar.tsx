@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ChevronDown, Menu, X } from "lucide-react";
+import { LogOut, ChevronDown, Menu, X, Settings } from "lucide-react";
 
 interface TopNavbarProps {
   title: string;
@@ -14,7 +14,7 @@ export default function TopNavbar({
   onToggleSidebar,
   isSidebarOpen,
 }: TopNavbarProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, isSystemAdmin } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -109,9 +109,11 @@ export default function TopNavbar({
                 {user?.full_name || "User"}
               </p>
               <p className="text-[11px] font-medium text-on-surface-variant leading-tight mt-0.5 truncate max-w-[160px]">
-                {user?.organization_name ||
-                  user?.department ||
-                  "Enterprise Risk"}
+                {isSystemAdmin
+                  ? user?.department || "System Governance"
+                  : user?.organization_name ||
+                    user?.department ||
+                    "Enterprise Risk"}
               </p>
             </div>
             <div className="w-9 h-9 rounded-full border border-outline-variant bg-primary-container flex items-center justify-center text-on-primary text-xs font-bold shadow-xs">
@@ -158,8 +160,12 @@ export default function TopNavbar({
                   }}
                   className="w-full text-left px-4 py-2 text-xs font-semibold text-primary hover:bg-surface-container transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <span>Profile & Business Info</span>
-                  <span className="text-[10px] text-on-surface-variant">→</span>
+                  <span>
+                    {isSystemAdmin
+                      ? "Admin Profile Settings"
+                      : "Profile & Organization"}
+                  </span>
+                  <Settings className="w-3.5 h-3.5 text-on-surface-variant" />
                 </button>
               </div>
 

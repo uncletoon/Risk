@@ -1,28 +1,34 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import Sidebar from './components/layout/Sidebar';
-import TopNavbar from './components/layout/TopNavbar';
+import React, { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Sidebar from "./components/layout/Sidebar";
+import TopNavbar from "./components/layout/TopNavbar";
 
 // Core Pages
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import OrganizationProfile from './pages/OrganizationProfile';
-import NewAssessment from './pages/NewAssessment';
-import AssessmentList from './pages/AssessmentList';
-import AssessmentDetails from './pages/AssessmentDetails';
-import MitigationManagement from './pages/MitigationManagement';
-import AssessmentHistory from './pages/AssessmentHistory';
-import Reports from './pages/Reports';
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import OrganizationProfile from "./pages/OrganizationProfile";
+import NewAssessment from "./pages/NewAssessment";
+import AssessmentList from "./pages/AssessmentList";
+import AssessmentDetails from "./pages/AssessmentDetails";
+import MitigationManagement from "./pages/MitigationManagement";
+import AssessmentHistory from "./pages/AssessmentHistory";
+import Reports from "./pages/Reports";
 
 // Admin Governance Pages
-import UserManagement from './pages/admin/UserManagement';
-import RiskCategories from './pages/admin/RiskCategories';
-import RiskRules from './pages/admin/RiskRules';
-import AuditLogs from './pages/admin/AuditLogs';
-import SystemHealth from './pages/admin/SystemHealth';
+import UserManagement from "./pages/admin/UserManagement";
+import RiskCategories from "./pages/admin/RiskCategories";
+import RiskRules from "./pages/admin/RiskRules";
+import AuditLogs from "./pages/admin/AuditLogs";
+import SystemHealth from "./pages/admin/SystemHealth";
 
-function ProtectedLayout({ children, title }: { children: React.ReactNode; title: string }) {
+function ProtectedLayout({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -52,7 +58,10 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/dashboard" replace /> : <Login />}
+      />
 
       {/* Main Dashboard */}
       <Route
@@ -64,11 +73,17 @@ function AppRoutes() {
         }
       />
 
-      {/* Risk Officer Endpoints */}
+      {/* User & Organization Profile */}
       <Route
         path="/organization"
         element={
-          <ProtectedLayout title="Organization Profile & Scope">
+          <ProtectedLayout
+            title={
+              user?.role === "SYSTEM_ADMIN"
+                ? "Administrator Account Profile"
+                : "Organization Profile & Scope"
+            }
+          >
             <OrganizationProfile />
           </ProtectedLayout>
         }
