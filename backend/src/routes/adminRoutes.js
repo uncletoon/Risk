@@ -6,8 +6,10 @@ const express = require('express');
 const router = express.Router();
 const {
   listUsers,
+  getUserData,
   createNewUser,
   updateUserData,
+  updateUserStatusHandler,
   listCategories,
   updateWeight,
   updateWeightsBatch,
@@ -26,8 +28,10 @@ router.use(authorize('SYSTEM_ADMIN'));
 
 // Users
 router.get('/users', listUsers);
+router.get('/users/:id', getUserData);
 router.post('/users', createNewUser);
 router.put('/users/:id', updateUserData);
+router.patch('/users/:id/status', updateUserStatusHandler);
 
 // Categories
 router.get('/categories', listCategories);

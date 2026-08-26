@@ -4,8 +4,10 @@
 
 const {
   getUsers,
+  getUserDetails,
   createUser,
   updateUser,
+  updateUserStatus,
   getCategories,
   updateCategoryWeight,
   updateCategoryWeightsBatch,
@@ -14,8 +16,11 @@ const {
   updateRule,
   deleteRule,
   getSystemHealth,
-} = require('../services/adminService');
-const { getAuditLogs, generateAuditLogsCsv } = require('../services/auditService');
+} = require("../services/adminService");
+const {
+  getAuditLogs,
+  generateAuditLogsCsv,
+} = require("../services/auditService");
 
 // User Management
 const listUsers = async (req, res) => {
@@ -23,7 +28,18 @@ const listUsers = async (req, res) => {
     const users = await getUsers();
     res.json(users);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch users", error: err.message });
+  }
+};
+
+const getUserData = async (req, res) => {
+  try {
+    const user = await getUserDetails(req.params.id);
+    res.json(user);
+  } catch (err) {
+    res.status(404).json({ message: err.message });
   }
 };
 
@@ -45,13 +61,30 @@ const updateUserData = async (req, res) => {
   }
 };
 
+const updateUserStatusHandler = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) {
+      return res
+        .status(400)
+        .json({ message: "Status is required (active or inactive)." });
+    }
+    const user = await updateUserStatus(req.params.id, status, req.user?.id);
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
 // Category Management
 const listCategories = async (req, res) => {
   try {
     const categories = await getCategories();
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch categories', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch categories", error: err.message });
   }
 };
 
@@ -59,7 +92,11 @@ const updateWeight = async (req, res) => {
   try {
     const { code } = req.params;
     const { defaultWeight } = req.body;
-    const updated = await updateCategoryWeight(code, parseFloat(defaultWeight), req.user?.id);
+    const updated = await updateCategoryWeight(
+      code,
+      parseFloat(defaultWeight),
+      req.user?.id,
+    );
     res.json(updated);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -82,7 +119,9 @@ const listRules = async (req, res) => {
     const rules = await getRules();
     res.json(rules);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch rules', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch rules", error: err.message });
   }
 };
 
@@ -117,7 +156,7 @@ const deleteRuleItem = async (req, res) => {
 const listAuditLogs = async (req, res) => {
   try {
     const filters = {
-      limit: parseInt(req.query.limit || '100', 10),
+      limit: parseInt(req.query.limit || "100", 10),
       action: req.query.action,
       actor: req.query.actor,
       entityType: req.query.entityType,
@@ -127,7 +166,9 @@ const listAuditLogs = async (req, res) => {
     const logs = await getAuditLogs(filters);
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch audit logs', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch audit logs", error: err.message });
   }
 };
 
@@ -143,12 +184,14 @@ const exportAuditLogs = async (req, res) => {
     const csvContent = await generateAuditLogsCsv(filters);
     const filename = `ERIDSS_Audit_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.status(200).send(csvContent);
   } catch (err) {
-    console.error('Failed to export audit logs:', err);
-    res.status(500).json({ message: 'Failed to export audit logs', error: err.message });
+    console.error("Failed to export audit logs:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to export audit logs", error: err.message });
   }
 };
 
@@ -157,14 +200,18 @@ const getHealth = async (req, res) => {
     const health = await getSystemHealth();
     res.json(health);
   } catch (err) {
-    res.status(500).json({ message: 'Health check failed', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Health check failed", error: err.message });
   }
 };
 
 module.exports = {
   listUsers,
+  getUserData,
   createNewUser,
   updateUserData,
+  updateUserStatusHandler,
   listCategories,
   updateWeight,
   updateWeightsBatch,

@@ -344,6 +344,11 @@ export const api = {
     return handleResponse<any[]>(res);
   },
 
+  getAdminUserDetails: async (id: number) => {
+    const res = await fetch(`/api/admin/users/${id}`, { headers: getAuthHeader() });
+    return handleResponse<any>(res);
+  },
+
   createAdminUser: async (data: any) => {
     const res = await fetch('/api/admin/users', {
       method: 'POST',
@@ -358,6 +363,15 @@ export const api = {
       method: 'PUT',
       headers: getAuthHeader(),
       body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  updateAdminUserStatus: async (id: number, status: 'active' | 'inactive') => {
+    const res = await fetch(`/api/admin/users/${id}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ status }),
     });
     return handleResponse<any>(res);
   },

@@ -133,6 +133,94 @@ async function updateUser(userId, payload, adminUserId) {
   return res.rows[0];
 }
 
+async function getUserDetails(userId) {
+  const userRes = await pool.query(
+    `SELECT u.id, u.organization_id, u.full_name, u.email, u.phone_number, u.gender, u.role, u.department, u.status, u.created_at, u.updated_at,
+            o.name as organization_name, o.industry as organization_industry, o.business_type as organization_business_type,
+            o.district as organization_district, o.sector as organization_sector, o.street_number as organization_street_number,
+            o.product_types as organization_product_types, o.description as organization_description, o.contact_email as organization_contact_email
+     FROM users u
+     LEFT JOIN organizations o ON u.organization_id = o.id
+     WHERE u.id = $1`,
+    [userId],
+  );
+  if (userRes.rows.length === 0) {
+    throw new Error("User not found");
+  }
+
+  const user = userRes.rows[0];
+
+  // User and organization statistics
+  const [assessmentsRes, logsRes] = await Promise.all([
+    pool.query(
+      `SELECT count(*) as total_assessments,
+              count(*) FILTER (WHERE status = 'COMPLETED') as completed_assessments,
+              max(created_at) as latest_assessment_date
+       FROM assessments
+       WHERE created_by_id = $1 OR organization_id = $2`,
+      [userId, user.organization_id],
+    ),
+    pool.query(
+      `SELECT action, created_at, details
+       FROM audit_logs
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 5`,
+      [userId],
+    ),
+  ]);
+
+  return {
+    ...user,
+    stats: assessmentsRes.rows[0] || {
+      total_assessments: 0,
+      completed_assessments: 0,
+      latest_assessment_date: null,
+    },
+    recentActivity: logsRes.rows || [],
+  };
+}
+
+async function updateUserStatus(userId, status, adminUserId) {
+  const cleanStatus = (status || "").toLowerCase().trim();
+  const normalizedStatus =
+    cleanStatus === "deactive" ||
+    cleanStatus === "deactivated" ||
+    cleanStatus === "inactive" ||
+    cleanStatus === "disabled"
+      ? "inactive"
+      : "active";
+
+  if (
+    parseInt(userId, 10) === parseInt(adminUserId, 10) &&
+    normalizedStatus === "inactive"
+  ) {
+    throw new Error(
+      "Action Prohibited: You cannot deactivate your own Administrator account.",
+    );
+  }
+
+  const res = await pool.query(
+    `UPDATE users
+     SET status = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING id, organization_id, full_name, email, phone_number, gender, role, department, status, updated_at`,
+    [normalizedStatus, userId],
+  );
+
+  if (res.rows.length === 0) {
+    throw new Error("User not found");
+  }
+
+  const updatedUser = res.rows[0];
+  await logAudit(adminUserId, null, "USER_STATUS_CHANGED", "users", userId, {
+    newStatus: normalizedStatus,
+    targetUserEmail: updatedUser.email,
+  });
+
+  return updatedUser;
+}
+
 // --- Categories Management ---
 
 async function getCategories() {
@@ -453,8 +541,10 @@ async function getSystemHealth() {
 
 module.exports = {
   getUsers,
+  getUserDetails,
   createUser,
   updateUser,
+  updateUserStatus,
   getCategories,
   updateCategoryWeight,
   updateCategoryWeightsBatch,
