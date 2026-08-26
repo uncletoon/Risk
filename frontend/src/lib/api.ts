@@ -313,6 +313,15 @@ export const api = {
     return handleResponse<any>(res);
   },
 
+  updateAdminCategoryWeightsBatch: async (weights: Array<{ code: string; defaultWeight: number }>) => {
+    const res = await fetch('/api/admin/categories/weights', {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ weights }),
+    });
+    return handleResponse<any[]>(res);
+  },
+
   getAdminRules: async () => {
     const res = await fetch('/api/admin/rules', { headers: getAuthHeader() });
     return handleResponse<any[]>(res);
@@ -344,9 +353,49 @@ export const api = {
     return handleResponse<{ success: boolean }>(res);
   },
 
-  getAdminAuditLogs: async (limit: number = 100) => {
-    const res = await fetch(`/api/admin/audit-logs?limit=${limit}`, { headers: getAuthHeader() });
+  getAdminAuditLogs: async (params?: { limit?: number; action?: string; actor?: string; entityType?: string; startDate?: string; endDate?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.limit) query.append('limit', params.limit.toString());
+    if (params?.action) query.append('action', params.action);
+    if (params?.actor) query.append('actor', params.actor);
+    if (params?.entityType) query.append('entityType', params.entityType);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+
+    const res = await fetch(`/api/admin/audit-logs?${query.toString()}`, { headers: getAuthHeader() });
     return handleResponse<any[]>(res);
+  },
+
+  exportAdminAuditLogsCsv: async (params?: { action?: string; actor?: string; entityType?: string; startDate?: string; endDate?: string }) => {
+    const token = localStorage.getItem('eridss_token');
+    const query = new URLSearchParams();
+    if (params?.action) query.append('action', params.action);
+    if (params?.actor) query.append('actor', params.actor);
+    if (params?.entityType) query.append('entityType', params.entityType);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+
+    const res = await fetch(`/api/admin/audit-logs/export?${query.toString()}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Export failed' }));
+      throw new Error(err.message || 'Export failed');
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ERIDSS_Audit_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    return true;
   },
 
   getAdminHealth: async () => {

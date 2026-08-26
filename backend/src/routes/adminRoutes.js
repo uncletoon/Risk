@@ -10,11 +10,13 @@ const {
   updateUserData,
   listCategories,
   updateWeight,
+  updateWeightsBatch,
   listRules,
   createNewRule,
   updateRuleData,
   deleteRuleItem,
   listAuditLogs,
+  exportAuditLogs,
   getHealth,
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -29,6 +31,7 @@ router.put('/users/:id', updateUserData);
 
 // Categories
 router.get('/categories', listCategories);
+router.put('/categories/weights', updateWeightsBatch);
 router.put('/categories/:code/weight', updateWeight);
 
 // Rules
@@ -39,6 +42,7 @@ router.delete('/rules/:id', deleteRuleItem);
 
 // Audit & Health
 router.get('/audit-logs', listAuditLogs);
+router.get('/audit-logs/export', exportAuditLogs);
 router.get('/health', getHealth);
 
 module.exports = router;

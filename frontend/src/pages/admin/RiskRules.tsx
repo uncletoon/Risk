@@ -17,6 +17,8 @@ export default function RiskRules() {
   const [severity, setSeverity] = useState('High');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRules();
@@ -27,7 +29,7 @@ export default function RiskRules() {
       setLoading(true);
       const data = await api.getAdminRules();
       setRules(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load rules:', err);
     } finally {
       setLoading(false);
@@ -38,6 +40,7 @@ export default function RiskRules() {
     e.preventDefault();
     try {
       setSaving(true);
+      setErrorMsg(null);
       await api.createAdminRule({
         categoryCode,
         factorName,
@@ -52,9 +55,11 @@ export default function RiskRules() {
       setFactorName('');
       setThresholdValue('');
       setDescription('');
+      setSuccessMsg(`Rule for '${factorName}' created successfully.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
       fetchRules();
     } catch (err: any) {
-      alert(`Failed to create rule: ${err.message}`);
+      setErrorMsg(err.message || 'Failed to create rule');
     } finally {
       setSaving(false);
     }
@@ -103,6 +108,20 @@ export default function RiskRules() {
           <span>Add New Rule</span>
         </button>
       </div>
+
+      {successMsg && (
+        <div className="p-4 rounded-xl bg-tertiary-container/20 text-on-tertiary-container text-xs font-bold flex items-center gap-2 border border-tertiary-fixed-dim/40">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      {errorMsg && !isModalOpen && (
+        <div className="p-4 rounded-xl bg-error-container text-on-error-container text-xs font-bold flex items-center gap-2 border border-error/40">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
       {/* Rules Table */}
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
@@ -178,10 +197,17 @@ export default function RiskRules() {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start">
               <h3 className="text-base font-bold text-primary">Add Deterministic Business Rule</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-primary hover:text-error text-lg cursor-pointer font-bold">
+              <button onClick={() => { setIsModalOpen(false); setErrorMsg(null); }} className="text-primary hover:text-error text-lg cursor-pointer font-bold">
                 ✕
               </button>
             </div>
+
+            {errorMsg && (
+              <div className="p-3.5 rounded-xl bg-error-container text-on-error-container text-xs font-bold flex items-start gap-2 border border-error/40">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{errorMsg}</span>
+              </div>
+            )}
 
             <form onSubmit={handleCreateRule} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -59,16 +59,84 @@ async function getCategories() {
   return res.rows;
 }
 
+async function updateCategoryWeightsBatch(weightsArray, adminUserId) {
+  if (!Array.isArray(weightsArray) || weightsArray.length === 0) {
+    throw new Error('Invalid weights payload: expected an array of category weights.');
+  }
+
+  // Calculate sum of provided weights
+  const totalWeight = weightsArray.reduce((sum, item) => sum + (parseFloat(item.defaultWeight || item.default_weight) || 0), 0);
+  
+  if (Math.abs(totalWeight - 100) > 0.05) {
+    throw new Error(`Mathematical Governance Violation: Total category weights must sum to exactly 100.0%. Current sum is ${totalWeight.toFixed(2)}%.`);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const updatedCategories = [];
+    for (const item of weightsArray) {
+      const code = item.code;
+      const weight = parseFloat(item.defaultWeight || item.default_weight);
+      
+      const res = await client.query(
+        `UPDATE risk_categories
+         SET default_weight = $1, updated_at = NOW()
+         WHERE code = $2
+         RETURNING *`,
+        [weight, code]
+      );
+      if (res.rows.length > 0) {
+        updatedCategories.push(res.rows[0]);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    await logAudit(adminUserId, null, 'CATEGORY_WEIGHTS_BATCH_UPDATED', 'risk_categories', null, {
+      weights: weightsArray.map(w => ({ code: w.code, weight: parseFloat(w.defaultWeight || w.default_weight) })),
+      totalWeight: Number(totalWeight.toFixed(2)),
+    });
+
+    return updatedCategories;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 async function updateCategoryWeight(code, defaultWeight, adminUserId) {
+  const parsedWeight = parseFloat(defaultWeight);
+  if (isNaN(parsedWeight) || parsedWeight < 0 || parsedWeight > 100) {
+    throw new Error('Default weight must be a valid percentage between 0 and 100.');
+  }
+
+  // Check what the new total weight across all active categories would be
+  const otherCatsRes = await pool.query(
+    'SELECT code, default_weight FROM risk_categories WHERE code != $1 AND is_active = true',
+    [code]
+  );
+  const otherSum = otherCatsRes.rows.reduce((sum, r) => sum + parseFloat(r.default_weight), 0);
+  const newTotal = otherSum + parsedWeight;
+
+  if (Math.abs(newTotal - 100) > 0.05) {
+    throw new Error(
+      `Mathematical Governance Violation: Updating category '${code}' to ${parsedWeight}% would result in a total weight of ${newTotal.toFixed(2)}% (must equal exactly 100.0%). Please update category weights using the balanced batch update.`
+    );
+  }
+
   const res = await pool.query(
     `UPDATE risk_categories
      SET default_weight = $1, updated_at = NOW()
      WHERE code = $2
      RETURNING *`,
-    [defaultWeight, code]
+    [parsedWeight, code]
   );
   if (res.rows.length === 0) throw new Error('Category not found');
-  await logAudit(adminUserId, null, 'CATEGORY_WEIGHT_UPDATED', 'risk_categories', null, { code, defaultWeight });
+  await logAudit(adminUserId, null, 'CATEGORY_WEIGHT_UPDATED', 'risk_categories', null, { code, defaultWeight: parsedWeight });
   return res.rows[0];
 }
 
@@ -85,19 +153,72 @@ async function getRules() {
 }
 
 async function createRule({ categoryCode, factorName, conditionOperator, thresholdValue, likelihoodScore, impactScore, severity, description }, adminUserId) {
+  const cleanFactor = (factorName || '').trim();
+  const cleanThreshold = (thresholdValue || '').trim();
+
+  if (!cleanFactor) {
+    throw new Error('Risk factor name is required.');
+  }
+
+  // Conflict & Duplicate Detection
+  const duplicateCheck = await pool.query(
+    `SELECT id, factor_name, condition_operator, threshold_value 
+     FROM risk_rules 
+     WHERE category_code = $1 
+       AND LOWER(TRIM(factor_name)) = LOWER($2) 
+       AND condition_operator = $3 
+       AND LOWER(TRIM(threshold_value)) = LOWER($4)`,
+    [categoryCode, cleanFactor, conditionOperator, cleanThreshold]
+  );
+
+  if (duplicateCheck.rows.length > 0) {
+    throw new Error(
+      `Governance Conflict: A deterministic rule for category '${categoryCode}' with factor '${cleanFactor}' and condition '${conditionOperator} ${cleanThreshold}' already exists (Rule #${duplicateCheck.rows[0].id}).`
+    );
+  }
+
   const res = await pool.query(
     `INSERT INTO risk_rules (category_code, factor_name, condition_operator, threshold_value, likelihood_score, impact_score, severity, description)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
-    [categoryCode, factorName, conditionOperator, thresholdValue, likelihoodScore, impactScore, severity || 'Moderate', description || '']
+    [categoryCode, cleanFactor, conditionOperator, cleanThreshold, likelihoodScore, impactScore, severity || 'Moderate', description || '']
   );
   const rule = res.rows[0];
-  await logAudit(adminUserId, null, 'RULE_CREATED', 'risk_rules', rule.id, { factorName, thresholdValue });
+  await logAudit(adminUserId, null, 'RULE_CREATED', 'risk_rules', rule.id, { factorName: cleanFactor, thresholdValue: cleanThreshold });
   return rule;
 }
 
 async function updateRule(ruleId, updates, adminUserId) {
   const { category_code, factor_name, condition_operator, threshold_value, likelihood_score, impact_score, severity, description, is_active } = updates;
+
+  if (factor_name || condition_operator || threshold_value || category_code) {
+    // Conflict Check against other existing rules
+    const currentRuleRes = await pool.query('SELECT * FROM risk_rules WHERE id = $1', [ruleId]);
+    if (currentRuleRes.rows.length === 0) throw new Error('Rule not found');
+    const current = currentRuleRes.rows[0];
+
+    const checkCategory = category_code || current.category_code;
+    const checkFactor = (factor_name || current.factor_name).trim();
+    const checkOperator = condition_operator || current.condition_operator;
+    const checkThreshold = (threshold_value || current.threshold_value).trim();
+
+    const duplicateCheck = await pool.query(
+      `SELECT id FROM risk_rules 
+       WHERE id != $1 
+         AND category_code = $2 
+         AND LOWER(TRIM(factor_name)) = LOWER($3) 
+         AND condition_operator = $4 
+         AND LOWER(TRIM(threshold_value)) = LOWER($5)`,
+      [ruleId, checkCategory, checkFactor, checkOperator, checkThreshold]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      throw new Error(
+        `Governance Conflict: Another rule (#${duplicateCheck.rows[0].id}) already defines '${checkFactor}' with '${checkOperator} ${checkThreshold}' in category '${checkCategory}'.`
+      );
+    }
+  }
+
   const res = await pool.query(
     `UPDATE risk_rules
      SET category_code = COALESCE($1, category_code),
@@ -160,6 +281,7 @@ module.exports = {
   updateUser,
   getCategories,
   updateCategoryWeight,
+  updateCategoryWeightsBatch,
   getRules,
   createRule,
   updateRule,
