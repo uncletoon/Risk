@@ -2,16 +2,19 @@
 // Auth Controller
 // ============================================================================
 
+const { pool } = require("../config/db");
 const {
   authenticateUser,
   getUserById,
   updateUserProfile,
   registerRiskOfficer,
+  registerEmployee,
 } = require("../services/authService");
 
 const register = async (req, res) => {
   try {
     const {
+      role,
       full_name,
       fullName,
       email,
@@ -20,7 +23,26 @@ const register = async (req, res) => {
       gender,
       password,
       organization,
+      organization_id,
+      organizationId,
+      department,
     } = req.body;
+
+    if (
+      role === "EMPLOYEE" ||
+      (!organization && (organizationId || organization_id))
+    ) {
+      const result = await registerEmployee({
+        fullName: fullName || full_name,
+        email,
+        phoneNumber: phoneNumber || phone_number,
+        gender,
+        password,
+        organizationId: organizationId || organization_id,
+        department,
+      });
+      return res.status(201).json(result);
+    }
 
     const result = await registerRiskOfficer({
       fullName: fullName || full_name,
@@ -83,9 +105,21 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const getPublicOrganizations = async (req, res) => {
+  try {
+    const orgs = await pool.query(
+      "SELECT id, name, industry, business_type, district, sector FROM organizations ORDER BY name ASC",
+    );
+    res.json(orgs.rows);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch organizations" });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateProfile,
+  getPublicOrganizations,
 };

@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 export type UserRole =
   | "SYSTEM_ADMIN"
   | "RISK_OFFICER"
+  | "EMPLOYEE"
   | "admin"
   | "risk_officer"
   | "employee";
@@ -25,26 +26,28 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (payload: any) => Promise<boolean>;
+  register: (payload: any) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateCurrentUser: (userData: Partial<User>) => void;
   loading: boolean;
   error: string | null;
   isSystemAdmin: boolean;
   isRiskOfficer: boolean;
+  isEmployee: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
   login: async () => false,
-  register: async () => false,
+  register: async () => ({ success: false }),
   logout: () => {},
   updateCurrentUser: () => {},
   loading: false,
   error: null,
   isSystemAdmin: false,
   isRiskOfficer: false,
+  isEmployee: false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -119,7 +122,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const register = async (payload: any): Promise<boolean> => {
+  const register = async (
+    payload: any,
+  ): Promise<{ success: boolean; message?: string }> => {
     setLoading(true);
     setError(null);
     try {
@@ -135,14 +140,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       const data = await res.json();
-      setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem("eridss_user", JSON.stringify(data.user));
-      localStorage.setItem("eridss_token", data.token);
-      return true;
+      if (data.token && data.user) {
+        setUser(data.user);
+        setToken(data.token);
+        localStorage.setItem("eridss_user", JSON.stringify(data.user));
+        localStorage.setItem("eridss_token", data.token);
+      }
+      return { success: true, message: data.message };
     } catch (err: any) {
       setError(err.message);
-      return false;
+      return { success: false, message: err.message };
     } finally {
       setLoading(false);
     }
@@ -166,10 +173,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const roleStr = (user?.role || "").toUpperCase();
   const isSystemAdmin = roleStr === "SYSTEM_ADMIN" || roleStr === "ADMIN";
-  const isRiskOfficer =
-    roleStr === "RISK_OFFICER" ||
-    roleStr === "OFFICER" ||
-    roleStr === "EMPLOYEE";
+  const isRiskOfficer = roleStr === "RISK_OFFICER" || roleStr === "OFFICER";
+  const isEmployee = roleStr === "EMPLOYEE";
 
   return (
     <AuthContext.Provider
@@ -184,6 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         error,
         isSystemAdmin,
         isRiskOfficer,
+        isEmployee,
       }}
     >
       {children}

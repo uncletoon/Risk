@@ -26,7 +26,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { user, isSystemAdmin } = useAuth();
+  const { user, isSystemAdmin, isRiskOfficer, isEmployee } = useAuth();
   const [orgName, setOrgName] = useState(
     user?.organization_name || "Enterprise",
   );
@@ -51,8 +51,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         // fallback
       }
     };
-    loadOrg();
-  }, [user]);
+    if (!isSystemAdmin) {
+      loadOrg();
+    }
+  }, [user, isSystemAdmin]);
 
   const handleNavClick = () => {
     if (onClose && window.innerWidth < 1024) {
@@ -87,7 +89,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 ERIDSS
               </h1>
               <p className="text-[10px] text-on-primary-container font-semibold tracking-wider uppercase">
-                Risk Intelligence & Decision
+                {isEmployee
+                  ? "Employee Portal"
+                  : "Risk Intelligence & Decision"}
               </p>
             </div>
           </div>
@@ -102,42 +106,88 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* Role Context Badge */}
-        <div className="mx-4 mb-4 px-3.5 py-2.5 rounded-xl bg-surface-container-highest/15 border border-outline-variant/30 flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-tertiary-fixed-dim animate-pulse"></span>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase font-bold text-on-primary-container tracking-wider">
-              Active Role
-            </p>
-            <p className="text-[12px] font-bold text-surface-container-lowest truncate">
-              {isSystemAdmin ? "System Administrator" : "Chief Risk Officer"}
-            </p>
+        {/* Enterprise Identity Card for Non-Admin */}
+        {!isSystemAdmin && (
+          <div className="mx-4 mb-4 p-3 rounded-2xl bg-surface-container-highest/20 border border-outline-variant/15 flex items-center gap-3 shadow-inner">
+            <div className="w-9 h-9 rounded-xl bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[9px] uppercase tracking-wider font-extrabold text-secondary-fixed-dim block">
+                {isEmployee ? "Assigned Enterprise" : "Enterprise Workspace"}
+              </span>
+              <p
+                className="text-xs font-bold text-surface-container-lowest truncate"
+                title={orgName}
+              >
+                {orgName}
+              </p>
+              <span className="text-[10px] text-on-primary-container font-medium block truncate">
+                {isEmployee ? user?.department || "Operations" : orgIndustry}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Navigation Menu */}
-        <div className="flex-1 overflow-y-auto px-3 flex flex-col gap-1.5 custom-scrollbar">
-          <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-on-primary-container mt-1 mb-1">
-            Risk Management
-          </p>
-
-          <NavLink
-            to="/dashboard"
-            onClick={handleNavClick}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                isActive
-                  ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
-                  : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
-              }`
-            }
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            <span>Executive Dashboard</span>
-          </NavLink>
-
-          {!isSystemAdmin && (
+        {/* Navigation Links */}
+        <div className="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+          {/* 1. EMPLOYEE NAVIGATION */}
+          {isEmployee && (
             <>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-black uppercase tracking-wider text-on-primary-container/80">
+                Document Submissions
+              </div>
+
+              <NavLink
+                to="/employee/dashboard"
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
+                  }`
+                }
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Submit & View Documents</span>
+              </NavLink>
+
+              <NavLink
+                to="/organization"
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
+                  }`
+                }
+              >
+                <User className="w-4 h-4" />
+                <span>My Profile</span>
+              </NavLink>
+            </>
+          )}
+
+          {/* 2. RISK OFFICER NAVIGATION */}
+          {!isSystemAdmin && !isEmployee && (
+            <>
+              <NavLink
+                to="/dashboard"
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
+                  }`
+                }
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Executive Dashboard</span>
+              </NavLink>
+
               <NavLink
                 to="/assessments/new"
                 onClick={handleNavClick}
@@ -213,10 +263,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <FileText className="w-4 h-4" />
                 <span>Audit-Ready Reports</span>
               </NavLink>
+
+              <NavLink
+                to="/organization"
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
+                  }`
+                }
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Enterprise & Employees</span>
+              </NavLink>
             </>
           )}
 
-          {/* Admin Governance Section */}
+          {/* 3. SYSTEM ADMIN NAVIGATION */}
           {isSystemAdmin && (
             <>
               <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-on-primary-container mt-3 mb-1">

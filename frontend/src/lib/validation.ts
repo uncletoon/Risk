@@ -139,7 +139,7 @@ export function validateLocationName(value: string, fieldName: string): Validati
 /**
  * Validate Business Type / Industry Sector (letters, spaces, &, /, hyphens, commas)
  */
-export function validateBusinessCategory(value: string, fieldName: string): ValidationResult {
+export function validateBusinessCategory(value: string, fieldName = 'Business Type'): ValidationResult {
   const trimmed = (value || '').trim();
   if (!trimmed) {
     return { isValid: false, error: `${fieldName} is required.` };

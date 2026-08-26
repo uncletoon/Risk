@@ -252,34 +252,18 @@ export const api = {
   },
 
   // Auth & Profile
-  register: async (data: {
-    fullName: string;
-    email: string;
-    phoneNumber?: string;
-    gender?: string;
-    password: string;
-    organization: {
-      name: string;
-      industry?: string;
-      businessType?: string;
-      business_type?: string;
-      district?: string;
-      sector?: string;
-      streetNumber?: string;
-      street_number?: string;
-      productTypes?: string;
-      product_types?: string;
-      contactEmail?: string;
-      contact_email?: string;
-      description?: string;
-    };
-  }) => {
+  getPublicOrganizations: async () => {
+    const res = await fetch('/api/auth/organizations');
+    return handleResponse<any[]>(res);
+  },
+
+  register: async (data: any) => {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return handleResponse<{ token: string; user: any }>(res);
+    return handleResponse<{ token?: string; user?: any; message?: string }>(res);
   },
 
   updateUserProfile: async (data: { full_name?: string; email?: string; phone_number?: string; gender?: string }) => {
@@ -289,6 +273,80 @@ export const api = {
       body: JSON.stringify(data),
     });
     return handleResponse<any>(res);
+  },
+
+  // Employee Submissions & Management
+  submitEmployeeDocument: async (file: File, title: string, description: string) => {
+    const token = localStorage.getItem('eridss_token');
+    const formData = new FormData();
+    formData.append('document', file);
+    formData.append('title', title);
+    formData.append('description', description);
+
+    const res = await fetch('/api/employee/submissions', {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    return handleResponse<{ message: string; submission: any }>(res);
+  },
+
+  getEmployeeSubmissions: async () => {
+    const res = await fetch('/api/employee/submissions', { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  getOrganizationEmployees: async () => {
+    const res = await fetch('/api/employee/organization/employees', { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  getEmployeeDetails: async (id: number) => {
+    const res = await fetch(`/api/employee/organization/employees/${id}`, { headers: getAuthHeader() });
+    return handleResponse<any>(res);
+  },
+
+  updateEmployeeStatus: async (id: number, status: 'accept' | 'decline' | 'enable' | 'disable' | string) => {
+    const res = await fetch(`/api/employee/organization/employees/${id}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ status }),
+    });
+    return handleResponse<{ message: string; employee: any }>(res);
+  },
+
+  getOrganizationSubmissions: async () => {
+    const res = await fetch('/api/employee/organization/submissions', { headers: getAuthHeader() });
+    return handleResponse<any[]>(res);
+  },
+
+  downloadSubmission: async (id: number, fallbackName = 'document') => {
+    const res = await fetch(`/api/employee/submissions/${id}/download`, {
+      headers: getAuthHeader(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Download failed' }));
+      throw new Error(err.message || 'Download failed');
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition');
+    let filename = fallbackName;
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) {
+        filename = decodeURIComponent(match[1]);
+      }
+    }
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   },
 
   // Organizations

@@ -44,7 +44,13 @@ export default function TopNavbar({
 
   const getRoleBadge = (role?: string) => {
     const r = (role || "").toUpperCase();
-    if (r === "RISK_OFFICER" || r === "OFFICER" || r === "EMPLOYEE") {
+    if (r === "EMPLOYEE") {
+      return {
+        label: "Employee",
+        bg: "bg-[#000047] text-white border-[#000047]",
+      };
+    }
+    if (r === "RISK_OFFICER" || r === "OFFICER") {
       return {
         label: "Risk Officer",
         bg: "bg-secondary/15 text-secondary border-secondary/30",

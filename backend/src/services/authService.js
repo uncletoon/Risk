@@ -14,7 +14,7 @@ async function authenticateUser(email, password) {
     `SELECT u.*, o.name as organization_name 
      FROM users u
      LEFT JOIN organizations o ON u.organization_id = o.id
-     WHERE LOWER(u.email) = LOWER($1) AND u.status = 'active'`,
+     WHERE LOWER(u.email) = LOWER($1)`,
     [email],
   );
 
@@ -26,6 +26,22 @@ async function authenticateUser(email, password) {
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     throw new Error("Invalid email or password");
+  }
+
+  if (user.status === "pending") {
+    throw new Error(
+      "Your employee account is pending approval by your organization's Risk Officer.",
+    );
+  }
+  if (user.status === "rejected") {
+    throw new Error(
+      "Your employee account registration was declined by your organization.",
+    );
+  }
+  if (user.status === "inactive" || user.status === "suspended") {
+    throw new Error(
+      "Your account has been deactivated. Please contact your organization administrator.",
+    );
   }
 
   const token = jwt.sign(
@@ -50,6 +66,7 @@ async function authenticateUser(email, password) {
     department: user.department,
     organization_id: user.organization_id,
     organization_name: user.organization_name,
+    status: user.status,
     token,
   };
 }
@@ -284,10 +301,103 @@ async function updateUserProfile(
   };
 }
 
+async function registerEmployee({
+  fullName,
+  full_name,
+  email,
+  phoneNumber,
+  phone_number,
+  gender,
+  password,
+  organizationId,
+  organization_id,
+  department,
+}) {
+  const name = validateFullName(fullName || full_name);
+  const cleanEmail = validateEmail(email, true);
+  const phone = validatePhoneNumber(phoneNumber || phone_number);
+  const orgId = parseInt(organizationId || organization_id, 10);
+
+  if (!orgId) {
+    throw new Error("Please select the business organization you belong to.");
+  }
+
+  const orgRes = await pool.query(
+    "SELECT id, name FROM organizations WHERE id = $1",
+    [orgId],
+  );
+  if (orgRes.rows.length === 0) {
+    throw new Error("Selected organization does not exist.");
+  }
+
+  if (!password || password.length < 6) {
+    throw new Error("Password must be at least 6 characters long.");
+  }
+
+  // Check email and phone uniqueness across users
+  await checkUserUniqueness(pool, {
+    email: cleanEmail,
+    phoneNumber: phone,
+  });
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const res = await pool.query(
+    `INSERT INTO users (organization_id, full_name, email, password, phone_number, gender, role, department, status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'EMPLOYEE', $7, 'pending')
+     RETURNING id, organization_id, full_name, email, phone_number, gender, role, department, status, created_at`,
+    [
+      orgId,
+      name,
+      cleanEmail,
+      hashedPassword,
+      phone,
+      gender || null,
+      (department || "Operations").trim(),
+    ],
+  );
+
+  const newUser = res.rows[0];
+
+  // Audit log
+  await pool.query(
+    `INSERT INTO audit_logs (user_id, organization_id, action, entity_type, entity_id, details)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      newUser.id,
+      orgId,
+      "EMPLOYEE_REGISTERED_PENDING",
+      "users",
+      newUser.id,
+      JSON.stringify({
+        email: cleanEmail,
+        organization_name: orgRes.rows[0].name,
+        role: "EMPLOYEE",
+        status: "pending",
+      }),
+    ],
+  );
+
+  return {
+    message:
+      "Registration submitted successfully! Your account is pending approval by your organization's Risk Officer.",
+    user: {
+      id: newUser.id,
+      full_name: newUser.full_name,
+      email: newUser.email,
+      role: newUser.role,
+      status: newUser.status,
+      organization_id: orgId,
+      organization_name: orgRes.rows[0].name,
+    },
+  };
+}
+
 module.exports = {
   authenticateUser,
   getUserById,
   updateUserProfile,
   registerRiskOfficer,
+  registerEmployee,
   JWT_SECRET,
 };

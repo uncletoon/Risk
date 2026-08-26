@@ -114,7 +114,7 @@ export default function Login() {
               className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs font-black text-primary transition-all shadow-xs"
             >
               <UserPlus className="w-4 h-4 text-primary" />
-              <span>Register as Risk Officer</span>
+              <span>Register</span>
             </Link>
           </div>
 

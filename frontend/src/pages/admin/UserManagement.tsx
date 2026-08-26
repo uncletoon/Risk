@@ -55,6 +55,26 @@ export default function UserManagement() {
     message: string;
   } | null>(null);
 
+  const getRoleBadgeInfo = (role?: string) => {
+    const r = (role || "").toUpperCase();
+    if (r === "EMPLOYEE") {
+      return {
+        label: "Employee",
+        className: "bg-[#000047] text-white border-[#000047]",
+      };
+    }
+    if (r === "SYSTEM_ADMIN" || r === "ADMIN") {
+      return {
+        label: "System Admin",
+        className: "bg-primary/10 text-primary border-primary/30",
+      };
+    }
+    return {
+      label: "Risk Officer",
+      className: "bg-secondary/15 text-secondary border-secondary/30",
+    };
+  };
+
   // New User Form State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -476,17 +496,16 @@ export default function UserManagement() {
                       {/* Role & Dept */}
                       <td className="py-4 px-4">
                         <div className="space-y-1">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold border ${
-                              u.role === "SYSTEM_ADMIN" || u.role === "ADMIN"
-                                ? "bg-primary/10 text-primary border-primary/30"
-                                : "bg-secondary/15 text-secondary border-secondary/30"
-                            }`}
-                          >
-                            {u.role === "SYSTEM_ADMIN" || u.role === "ADMIN"
-                              ? "System Admin"
-                              : "Risk Officer"}
-                          </span>
+                          {(() => {
+                            const rInfo = getRoleBadgeInfo(u.role);
+                            return (
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold border ${rInfo.className}`}
+                              >
+                                {rInfo.label}
+                              </span>
+                            );
+                          })()}
                           <p className="text-[10px] text-on-surface-variant font-semibold">
                             {u.department || "Corporate Risk"}
                           </p>
@@ -608,9 +627,18 @@ export default function UserManagement() {
                   <h3 className="text-base font-black text-primary">
                     {userDetails?.full_name || "User Profile Details"}
                   </h3>
-                  <p className="text-xs text-on-surface-variant font-semibold">
-                    Account ID #{userDetails?.id} • Role: {userDetails?.role}
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-on-surface-variant font-semibold">
+                      Account ID #{userDetails?.id}
+                    </span>
+                    <span
+                      className={`inline-block px-2 py-0.2 rounded text-[10px] font-black border ${
+                        getRoleBadgeInfo(userDetails?.role).className
+                      }`}
+                    >
+                      {getRoleBadgeInfo(userDetails?.role).label}
+                    </span>
+                  </div>
                 </div>
               </div>
               <button
@@ -1046,6 +1074,7 @@ export default function UserManagement() {
                     className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="RISK_OFFICER">Risk Officer</option>
+                    <option value="EMPLOYEE">Employee</option>
                     <option value="SYSTEM_ADMIN">System Administrator</option>
                   </select>
                 </div>

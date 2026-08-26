@@ -15,6 +15,7 @@ import AssessmentDetails from "./pages/AssessmentDetails";
 import MitigationManagement from "./pages/MitigationManagement";
 import AssessmentHistory from "./pages/AssessmentHistory";
 import Reports from "./pages/Reports";
+import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 
 // Admin Governance Pages
 import UserManagement from "./pages/admin/UserManagement";
@@ -72,8 +73,22 @@ function AppRoutes() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedLayout title="Executive Enterprise Risk Intelligence Dashboard">
-            <Dashboard />
+          user?.role === "EMPLOYEE" ? (
+            <Navigate to="/employee/dashboard" replace />
+          ) : (
+            <ProtectedLayout title="Executive Enterprise Risk Intelligence Dashboard">
+              <Dashboard />
+            </ProtectedLayout>
+          )
+        }
+      />
+
+      {/* Employee Dashboard */}
+      <Route
+        path="/employee/dashboard"
+        element={
+          <ProtectedLayout title="Employee Document Submission Portal">
+            <EmployeeDashboard />
           </ProtectedLayout>
         }
       />
