@@ -2,26 +2,32 @@
 // Auth Controller
 // ============================================================================
 
-const { authenticateUser, getUserById } = require('../services/authService');
+const {
+  authenticateUser,
+  getUserById,
+  updateUserProfile,
+} = require("../services/authService");
 
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
     const userData = await authenticateUser(email, password);
     res.json(userData);
   } catch (err) {
-    res.status(401).json({ message: err.message || 'Authentication failed' });
+    res.status(401).json({ message: err.message || "Authentication failed" });
   }
 };
 
 const getMe = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(401).json({ message: "Unauthorized" });
     }
     const user = await getUserById(req.user.id);
     res.json(user);
@@ -30,7 +36,26 @@ const getMe = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { full_name, email, phone_number, gender } = req.body;
+    const updated = await updateUserProfile(req.user.id, {
+      fullName: full_name,
+      email,
+      phoneNumber: phone_number,
+      gender,
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
 module.exports = {
   login,
   getMe,
+  updateProfile,
 };

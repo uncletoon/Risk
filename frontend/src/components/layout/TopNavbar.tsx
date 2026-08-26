@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, ChevronDown, Menu, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { LogOut, ChevronDown, Menu, X } from "lucide-react";
 
 interface TopNavbarProps {
   title: string;
@@ -9,7 +9,11 @@ interface TopNavbarProps {
   isSidebarOpen?: boolean;
 }
 
-export default function TopNavbar({ title, onToggleSidebar, isSidebarOpen }: TopNavbarProps) {
+export default function TopNavbar({
+  title,
+  onToggleSidebar,
+  isSidebarOpen,
+}: TopNavbarProps) {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -24,37 +28,37 @@ export default function TopNavbar({ title, onToggleSidebar, isSidebarOpen }: Top
         setDropdownOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const getInitials = (name?: string) => {
-    if (!name) return 'U';
+    if (!name) return "U";
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
   const getRoleBadge = (role?: string) => {
-    const r = (role || '').toUpperCase();
-    if (r === 'RISK_OFFICER' || r === 'OFFICER' || r === 'EMPLOYEE') {
+    const r = (role || "").toUpperCase();
+    if (r === "RISK_OFFICER" || r === "OFFICER" || r === "EMPLOYEE") {
       return {
-        label: 'Risk Officer',
-        bg: 'bg-secondary/15 text-secondary border-secondary/30',
+        label: "Risk Officer",
+        bg: "bg-secondary/15 text-secondary border-secondary/30",
       };
     }
-    if (r === 'SYSTEM_ADMIN' || r === 'ADMIN') {
+    if (r === "SYSTEM_ADMIN" || r === "ADMIN") {
       return {
-        label: 'System Admin',
-        bg: 'bg-primary-container/10 text-primary border-primary-container/30',
+        label: "System Admin",
+        bg: "bg-primary-container/10 text-primary border-primary-container/30",
       };
     }
     return {
-      label: 'Risk Officer',
-      bg: 'bg-secondary/15 text-secondary border-secondary/30',
+      label: "Risk Officer",
+      bg: "bg-secondary/15 text-secondary border-secondary/30",
     };
   };
 
@@ -62,7 +66,7 @@ export default function TopNavbar({ title, onToggleSidebar, isSidebarOpen }: Top
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
@@ -74,7 +78,11 @@ export default function TopNavbar({ title, onToggleSidebar, isSidebarOpen }: Top
           className="lg:hidden p-2 rounded-xl text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0"
           aria-label="Toggle navigation menu"
         >
-          {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {isSidebarOpen ? (
+            <X className="w-5 h-5" />
+          ) : (
+            <Menu className="w-5 h-5" />
+          )}
         </button>
 
         <div className="flex items-center gap-2.5 min-w-0">
@@ -98,10 +106,12 @@ export default function TopNavbar({ title, onToggleSidebar, isSidebarOpen }: Top
           >
             <div className="text-right hidden md:block">
               <p className="text-xs font-bold text-on-surface leading-tight">
-                {user?.full_name || 'User'}
+                {user?.full_name || "User"}
               </p>
               <p className="text-[11px] font-medium text-on-surface-variant leading-tight mt-0.5 truncate max-w-[160px]">
-                {user?.organization_name || user?.department || 'Enterprise Risk'}
+                {user?.organization_name ||
+                  user?.department ||
+                  "Enterprise Risk"}
               </p>
             </div>
             <div className="w-9 h-9 rounded-full border border-outline-variant bg-primary-container flex items-center justify-center text-on-primary text-xs font-bold shadow-xs">
@@ -115,16 +125,42 @@ export default function TopNavbar({ title, onToggleSidebar, isSidebarOpen }: Top
             <div className="absolute right-0 mt-2 w-64 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-4 py-3 border-b border-outline-variant/60 bg-surface-container-low">
                 <p className="text-xs font-bold text-on-surface">
-                  {user?.full_name}
+                  {user?.full_name || "Authenticated User"}
                 </p>
                 <p className="text-[11px] font-medium text-on-surface-variant truncate mt-0.5">
                   {user?.email}
                 </p>
-                <span
-                  className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border mt-2 ${roleInfo.bg}`}
+                {user?.phone_number && (
+                  <p className="text-[10px] text-on-surface-variant truncate mt-0.5">
+                    {user.phone_number}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  <span
+                    className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${roleInfo.bg}`}
+                  >
+                    {roleInfo.label}
+                  </span>
+                  {user?.gender && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-surface-container text-on-surface-variant border-outline-variant/60">
+                      {user.gender}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Settings / Profile link */}
+              <div className="py-1 border-b border-outline-variant/40">
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate("/organization");
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-primary hover:bg-surface-container transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  {roleInfo.label}
-                </span>
+                  <span>Profile & Business Info</span>
+                  <span className="text-[10px] text-on-surface-variant">→</span>
+                </button>
               </div>
 
               {/* Log Out Option */}

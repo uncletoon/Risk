@@ -7,9 +7,30 @@
  * Prompt for Step 1: Structured Document Extraction & Risk Discovery
  */
 function buildDocumentExtractionPrompt(documentText, organizationProfile) {
+  const orgDetails = [
+    `Organization: "${organizationProfile?.name || "Enterprise"}"`,
+    organizationProfile?.industry
+      ? `Industry: ${organizationProfile.industry}`
+      : null,
+    organizationProfile?.business_type
+      ? `Type of Business: ${organizationProfile.business_type}`
+      : null,
+    organizationProfile?.product_types
+      ? `Products/Services: ${organizationProfile.product_types}`
+      : null,
+    organizationProfile?.district || organizationProfile?.sector
+      ? `Location: ${[organizationProfile.street_number, organizationProfile.sector, organizationProfile.district].filter(Boolean).join(", ")}`
+      : null,
+    organizationProfile?.description
+      ? `Operational Scope: ${organizationProfile.description}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
   return `
 You are the Chief Risk Officer Intelligence Agent for the Enterprise Risk Intelligence and Decision Support System (ERIDSS).
-Your task is to analyze the provided single business document for organization "${organizationProfile?.name || 'Enterprise'}" (${organizationProfile?.industry || 'Enterprise Business'}) and extract factual business data, evidence, internal controls, and candidate risk factors across the 5 enterprise categories:
+Your task is to analyze the provided single business document for ${orgDetails} and extract factual business data, evidence, internal controls, and candidate risk factors across the 5 enterprise categories:
 
 1. FINANCIAL (Capital, liquidity, cash flow, debt leverage, revenue, margins)
 2. OPERATIONAL (Processes, supply chain, key-person dependency, IT operations, vendor dependencies)
@@ -81,7 +102,7 @@ function buildPostCalculationIntelligencePrompt(assessmentContext) {
 
   return `
 You are the Senior Enterprise Risk Intelligence AI for ERIDSS.
-The deterministic backend risk engine has completed the mathematical calculations for "${organization?.name || 'Enterprise'}".
+The deterministic backend risk engine has completed the mathematical calculations for "${organization?.name || "Enterprise"}".
 Here are the official calculated scores and extracted facts:
 
 === ENTERPRISE RISK INDEX (ERI) ===
@@ -142,38 +163,53 @@ Respond STRICTLY with valid JSON following this exact schema:
 /**
  * Prompt for Step 3: Grounded AI Risk Advisor Contextual Q&A
  */
-function buildAdvisorGroundedPrompt(question, assessmentSummary, chatHistory = []) {
+function buildAdvisorGroundedPrompt(
+  question,
+  assessmentSummary,
+  chatHistory = [],
+) {
   const scoresText = (assessmentSummary?.categoryScores || [])
-    .map(c => `• ${c.category_name || c.category_code}: Score ${Number(c.category_score).toFixed(1)}/100 (Weight ${c.category_weight}%)`)
-    .join('\n');
+    .map(
+      (c) =>
+        `• ${c.category_name || c.category_code}: Score ${Number(c.category_score).toFixed(1)}/100 (Weight ${c.category_weight}%)`,
+    )
+    .join("\n");
 
   const risksText = (assessmentSummary?.identifiedRisks || [])
     .slice(0, 10)
-    .map(r => `• [${r.category}] ${r.name}: Residual Risk ${Number(r.residualRisk).toFixed(1)} (${r.classification}), Inherent ${r.inherentRisk} (Likelihood: ${r.likelihood}/5, Impact: ${r.impact}/5), Control Effectiveness: ${r.controlEffectiveness}% - ${r.description}`)
-    .join('\n');
+    .map(
+      (r) =>
+        `• [${r.category}] ${r.name}: Residual Risk ${Number(r.residualRisk).toFixed(1)} (${r.classification}), Inherent ${r.inherentRisk} (Likelihood: ${r.likelihood}/5, Impact: ${r.impact}/5), Control Effectiveness: ${r.controlEffectiveness}% - ${r.description}`,
+    )
+    .join("\n");
 
   const recsText = (assessmentSummary?.recommendations || [])
     .slice(0, 5)
-    .map(rec => `• [${rec.priority}] ${rec.title}: ${rec.recommendation_text}`)
-    .join('\n');
+    .map(
+      (rec) => `• [${rec.priority}] ${rec.title}: ${rec.recommendation_text}`,
+    )
+    .join("\n");
 
   return `
 ASSESSMENT CONTEXT:
-Organization: ${assessmentSummary?.organization?.name || 'Enterprise'} (${assessmentSummary?.organization?.industry || 'General'})
-Enterprise Risk Index (ERI): ${Number(assessmentSummary?.assessment?.overallERI || 0).toFixed(1)} / 100 (${assessmentSummary?.assessment?.classification || 'Moderate'})
-Document Scope: ${assessmentSummary?.assessment?.summary || 'Standard assessment'}
+Organization: ${assessmentSummary?.organization?.name || "Enterprise"} (${assessmentSummary?.organization?.industry || "General"})
+Enterprise Risk Index (ERI): ${Number(assessmentSummary?.assessment?.overallERI || 0).toFixed(1)} / 100 (${assessmentSummary?.assessment?.classification || "Moderate"})
+Document Scope: ${assessmentSummary?.assessment?.summary || "Standard assessment"}
 
 Category Breakdown:
-${scoresText || 'No category scores'}
+${scoresText || "No category scores"}
 
 Identified Risks:
-${risksText || 'No identified risks'}
+${risksText || "No identified risks"}
 
 Remediation Actions:
-${recsText || 'No recommendations'}
+${recsText || "No recommendations"}
 
 RECENT CONVERSATION:
-${chatHistory.slice(-4).map(m => `${m.role === 'user' ? 'Risk Officer' : 'Advisor'}: ${m.content}`).join('\n')}
+${chatHistory
+  .slice(-4)
+  .map((m) => `${m.role === "user" ? "Risk Officer" : "Advisor"}: ${m.content}`)
+  .join("\n")}
 
 USER QUESTION:
 ${question}

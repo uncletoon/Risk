@@ -251,13 +251,33 @@ export const api = {
     return handleResponse<{ question: string; answer: string; timestamp: string }>(res);
   },
 
+  // Profile
+  updateUserProfile: async (data: { full_name?: string; email?: string; phone_number?: string; gender?: string }) => {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
   // Organizations
   getOrganizations: async () => {
     const res = await fetch('/api/organizations', { headers: getAuthHeader() });
     return handleResponse<any[]>(res);
   },
 
-  createOrganization: async (data: { name: string; industry?: string; description?: string; contact_email?: string }) => {
+  createOrganization: async (data: {
+    name: string;
+    industry?: string;
+    description?: string;
+    contact_email?: string;
+    business_type?: string;
+    district?: string;
+    sector?: string;
+    street_number?: string;
+    product_types?: string;
+  }) => {
     const res = await fetch('/api/organizations', {
       method: 'POST',
       headers: getAuthHeader(),
@@ -266,7 +286,20 @@ export const api = {
     return handleResponse<any>(res);
   },
 
-  updateOrganization: async (id: number, data: { name?: string; industry?: string; description?: string; contact_email?: string }) => {
+  updateOrganization: async (
+    id: number,
+    data: {
+      name?: string;
+      industry?: string;
+      description?: string;
+      contact_email?: string;
+      business_type?: string;
+      district?: string;
+      sector?: string;
+      street_number?: string;
+      product_types?: string;
+    }
+  ) => {
     const res = await fetch(`/api/organizations/${id}`, {
       method: 'PUT',
       headers: getAuthHeader(),

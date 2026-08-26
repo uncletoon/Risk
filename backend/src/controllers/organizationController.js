@@ -7,14 +7,16 @@ const {
   getOrganizationById,
   createOrganization,
   updateOrganization,
-} = require('../services/organizationService');
+} = require("../services/organizationService");
 
 const listOrganizations = async (req, res) => {
   try {
     const orgs = await getOrganizations();
     res.json(orgs);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch organizations', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch organizations", error: err.message });
   }
 };
 
@@ -29,14 +31,36 @@ const getOrganization = async (req, res) => {
 
 const createOrg = async (req, res) => {
   try {
-    const { name, industry, description, contact_email } = req.body;
+    const {
+      name,
+      industry,
+      description,
+      contact_email,
+      business_type,
+      district,
+      sector,
+      street_number,
+      product_types,
+    } = req.body;
     if (!name) {
-      return res.status(400).json({ message: 'Organization name is required' });
+      return res.status(400).json({ message: "Organization name is required" });
     }
-    const newOrg = await createOrganization({ name, industry, description, contact_email });
+    const newOrg = await createOrganization({
+      name,
+      industry,
+      description,
+      contact_email,
+      business_type,
+      district,
+      sector,
+      street_number,
+      product_types,
+    });
     res.status(201).json(newOrg);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create organization', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create organization", error: err.message });
   }
 };
 

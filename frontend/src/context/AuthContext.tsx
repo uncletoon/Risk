@@ -1,11 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type UserRole = 'SYSTEM_ADMIN' | 'RISK_OFFICER' | 'admin' | 'risk_officer' | 'employee';
+export type UserRole =
+  | "SYSTEM_ADMIN"
+  | "RISK_OFFICER"
+  | "admin"
+  | "risk_officer"
+  | "employee";
 
 export interface User {
   id: number;
   full_name: string;
   email: string;
+  phone_number?: string;
+  gender?: string;
   role: UserRole;
   department: string;
   status?: string;
@@ -19,6 +26,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  updateCurrentUser: (userData: Partial<User>) => void;
   loading: boolean;
   error: string | null;
   isSystemAdmin: boolean;
@@ -30,19 +38,22 @@ const AuthContext = createContext<AuthContextType>({
   token: null,
   login: async () => false,
   logout: () => {},
+  updateCurrentUser: () => {},
   loading: false,
   error: null,
   isSystemAdmin: false,
   isRiskOfficer: false,
 });
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('eridss_user');
+    const saved = localStorage.getItem("eridss_user");
     return saved ? JSON.parse(saved) : null;
   });
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('eridss_token') || null;
+    return localStorage.getItem("eridss_token") || null;
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,24 +61,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sync user profile directly with backend API on startup
   useEffect(() => {
     const refreshUserFromDb = async () => {
-      const storedToken = localStorage.getItem('eridss_token');
+      const storedToken = localStorage.getItem("eridss_token");
       if (!storedToken) return;
 
       try {
-        const res = await fetch('/api/auth/me', {
+        const res = await fetch("/api/auth/me", {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
         });
         if (res.ok) {
           const freshUser = await res.json();
-          setUser(prev => ({ ...freshUser, token: storedToken }));
-          localStorage.setItem('eridss_user', JSON.stringify({ ...freshUser, token: storedToken }));
+          setUser((prev) => ({ ...freshUser, token: storedToken }));
+          localStorage.setItem(
+            "eridss_user",
+            JSON.stringify({ ...freshUser, token: storedToken }),
+          );
         } else if (res.status === 401) {
           logout();
         }
       } catch (err) {
-        console.error('Failed to sync user profile with database:', err);
+        console.error("Failed to sync user profile with database:", err);
       }
     };
 
@@ -78,22 +92,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.message || 'Invalid email or password');
+        throw new Error(errData.message || "Invalid email or password");
       }
 
       const data = await res.json();
       setUser(data);
       setToken(data.token);
-      localStorage.setItem('eridss_user', JSON.stringify(data));
-      localStorage.setItem('eridss_token', data.token);
+      localStorage.setItem("eridss_user", JSON.stringify(data));
+      localStorage.setItem("eridss_token", data.token);
       return true;
     } catch (err: any) {
       setError(err.message);
@@ -106,13 +120,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('eridss_user');
-    localStorage.removeItem('eridss_token');
+    localStorage.removeItem("eridss_user");
+    localStorage.removeItem("eridss_token");
   };
 
-  const roleStr = (user?.role || '').toUpperCase();
-  const isSystemAdmin = roleStr === 'SYSTEM_ADMIN' || roleStr === 'ADMIN';
-  const isRiskOfficer = roleStr === 'RISK_OFFICER' || roleStr === 'OFFICER' || roleStr === 'EMPLOYEE';
+  const updateCurrentUser = (userData: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...userData };
+      localStorage.setItem("eridss_user", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const roleStr = (user?.role || "").toUpperCase();
+  const isSystemAdmin = roleStr === "SYSTEM_ADMIN" || roleStr === "ADMIN";
+  const isRiskOfficer =
+    roleStr === "RISK_OFFICER" ||
+    roleStr === "OFFICER" ||
+    roleStr === "EMPLOYEE";
 
   return (
     <AuthContext.Provider
@@ -121,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         login,
         logout,
+        updateCurrentUser,
         loading,
         error,
         isSystemAdmin,

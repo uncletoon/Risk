@@ -257,21 +257,16 @@ CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
 -- ============================================================================
 
 -- 1. Organizations
-INSERT INTO organizations (id, name, industry, description, contact_email)
-VALUES 
-  (1, 'Apex Horizon Global Enterprises', 'Financial & Enterprise Services', 'Multinational conglomerate operating in digital financial infrastructure, logistics, and cloud platforms.', 'compliance@apexhorizon.com')
+INSERT INTO organizations (id, name, industry, business_type, district, sector, street_number, product_types, description, contact_email)
+  (1, 'Apex Horizon Global Enterprises', 'Financial & Enterprise Services', 'Microfinance & Digital Lending', 'Nyarugenge', 'Nyarugenge', 'KN 4 Ave, Plot 12', 'Digital Micro-Loans, SME Working Capital, Savings & Group Guarantees', 'Multinational conglomerate operating in digital financial infrastructure, logistics, and cloud platforms.', 'compliance@apexhorizon.com')
 ON CONFLICT (id) DO NOTHING;
-
 -- 2. Users (Password is 'Admin@123' and 'Officer@123' hashed with bcrypt)
-INSERT INTO users (id, organization_id, full_name, email, password, role, department)
+INSERT INTO users (id, organization_id, full_name, email, password, phone_number, gender, role, department)
 VALUES
-  (1, 1, 'Dr. Marcus Vance (Admin)', 'admin@eridss.com', '$2b$10$NcUp88zXaaTQaYO4IY2py.vIO6q8/eRkGr11wNrxmRG6vv7e8hxCa', 'SYSTEM_ADMIN', 'Enterprise Risk Governance'),
-  (2, 1, 'Elena Rostova (Risk Officer)', 'officer@eridss.com', '$2b$10$lcy4o/lCXn5ad5sie9dvkesUW19z9wOJT0.Qfkwr1Dg/IOTLz1Fx2', 'RISK_OFFICER', 'Corporate Risk & Assurance')
+  (1, 1, 'Dr. Marcus Vance (Admin)', 'admin@eridss.com', '$2b$10$NcUp88zXaaTQaYO4IY2py.vIO6q8/eRkGr11wNrxmRG6vv7e8hxCa', '+250 788 123 456', 'Male', 'SYSTEM_ADMIN', 'Enterprise Risk Governance'),
 ON CONFLICT (id) DO UPDATE SET password = EXCLUDED.password;
 
 -- 3. Risk Categories (6 standard enterprise categories with default weights summing to 100%)
-INSERT INTO risk_categories (code, name, default_weight, description)
-VALUES
   ('FINANCIAL', 'Financial Risk', 20.00, 'Exposure to capital inadequacy, liquidity stress, debt overhang, revenue contraction, and credit volatility.'),
   ('OPERATIONAL', 'Operational Risk', 20.00, 'Vulnerabilities in internal processes, key-person dependency, supplier concentration, and business continuity failure.'),
   ('STRATEGIC', 'Strategic Risk', 15.00, 'Misalignment of business model, aggressive market expansion without buffer, M&A integration failure, or competitive disruption.'),
