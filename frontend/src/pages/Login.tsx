@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { ShieldAlert, Lock, Mail, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import {
+  ShieldAlert,
+  Lock,
+  Mail,
+  ArrowRight,
+  ShieldCheck,
+  UserCheck,
+  UserPlus,
+} from "lucide-react";
 
 export default function Login() {
   const { login, loading, error } = useAuth();
-  const [email, setEmail] = useState('officer@eridss.com');
-  const [password, setPassword] = useState('Officer@123');
+  const [email, setEmail] = useState("officer@eridss.com");
+  const [password, setPassword] = useState("Officer@123");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +32,9 @@ export default function Login() {
         <div className="w-14 h-14 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center mx-auto shadow-lg mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-primary">ERIDSS</h2>
+        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-primary">
+          ERIDSS
+        </h2>
         <p className="mt-1 text-xs sm:text-sm text-on-surface-variant font-bold">
           Enterprise Risk Intelligence and Decision Support System
         </p>
@@ -93,15 +104,31 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Register New Organization / Officer Account Link */}
+          <div className="mt-6 pt-5 border-t border-outline-variant text-center">
+            <p className="text-xs text-on-surface-variant mb-3 font-medium">
+              Need a new enterprise risk profile?
+            </p>
+            <Link
+              to="/register"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs font-black text-primary transition-all shadow-xs"
+            >
+              <UserPlus className="w-4 h-4 text-primary" />
+              <span>Register as Risk Officer</span>
+            </Link>
+          </div>
+
           {/* Quick Demo Role Selector */}
-          <div className="mt-8 pt-6 border-t border-outline-variant">
+          <div className="mt-6 pt-5 border-t border-outline-variant">
             <p className="text-[11px] uppercase tracking-wider font-extrabold text-primary text-center mb-3">
               Fast Demo Credential Switcher
             </p>
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('officer@eridss.com', 'Officer@123')}
+                onClick={() =>
+                  handleQuickLogin("officer@eridss.com", "Officer@123")
+                }
                 className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-primary transition-colors cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-secondary" />
@@ -110,7 +137,9 @@ export default function Login() {
 
               <button
                 type="button"
-                onClick={() => handleQuickLogin('admin@eridss.com', 'Admin@123')}
+                onClick={() =>
+                  handleQuickLogin("admin@eridss.com", "Admin@123")
+                }
                 className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container text-xs font-bold text-primary transition-colors cursor-pointer"
               >
                 <UserCheck className="w-3.5 h-3.5 text-primary" />

@@ -9,10 +9,21 @@ const {
   updateOrganization,
 } = require("../services/organizationService");
 
+const isUserAdmin = (user) => user?.role === "SYSTEM_ADMIN" || user?.role === "ADMIN";
+
 const listOrganizations = async (req, res) => {
   try {
-    const orgs = await getOrganizations();
-    res.json(orgs);
+    if (isUserAdmin(req.user)) {
+      const orgs = await getOrganizations();
+      return res.json(orgs);
+    }
+
+    if (req.user?.organization_id) {
+      const myOrg = await getOrganizationById(req.user.organization_id);
+      return res.json([myOrg]);
+    }
+
+    res.json([]);
   } catch (err) {
     res
       .status(500)
@@ -22,7 +33,12 @@ const listOrganizations = async (req, res) => {
 
 const getOrganization = async (req, res) => {
   try {
-    const org = await getOrganizationById(req.params.id);
+    const orgId = parseInt(req.params.id, 10);
+    if (!isUserAdmin(req.user) && req.user?.organization_id !== orgId) {
+      return res.status(403).json({ message: "Forbidden: Access denied to other organizations" });
+    }
+
+    const org = await getOrganizationById(orgId);
     res.json(org);
   } catch (err) {
     res.status(404).json({ message: err.message });
@@ -59,14 +75,19 @@ const createOrg = async (req, res) => {
     res.status(201).json(newOrg);
   } catch (err) {
     res
-      .status(500)
-      .json({ message: "Failed to create organization", error: err.message });
+      .status(400)
+      .json({ message: err.message || "Failed to create organization" });
   }
 };
 
 const updateOrg = async (req, res) => {
   try {
-    const updated = await updateOrganization(req.params.id, req.body);
+    const orgId = parseInt(req.params.id, 10);
+    if (!isUserAdmin(req.user) && req.user?.organization_id !== orgId) {
+      return res.status(403).json({ message: "Forbidden: You cannot modify another organization's profile" });
+    }
+
+    const updated = await updateOrganization(orgId, req.body);
     res.json(updated);
   } catch (err) {
     res.status(400).json({ message: err.message });

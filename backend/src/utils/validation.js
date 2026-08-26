@@ -86,14 +86,17 @@ function validateOrgName(name) {
   if (trimmed.length < 2) {
     throw new Error("Organization name must be at least 2 characters long.");
   }
-  const regex = /^[a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF\s&/,\-.'()]+$/;
+  const regex = /^[a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF\s&/,\-._'()]+$/;
   if (!regex.test(trimmed)) {
     throw new Error("Organization name contains invalid special characters.");
   }
   return trimmed;
 }
 
-async function checkUserUniqueness(pool, { email, phoneNumber, excludeUserId = null }) {
+async function checkUserUniqueness(
+  pool,
+  { email, phoneNumber, excludeUserId = null },
+) {
   if (email) {
     const cleanEmail = email.trim().toLowerCase();
     let query = "SELECT id FROM users WHERE LOWER(email) = $1";
@@ -104,7 +107,9 @@ async function checkUserUniqueness(pool, { email, phoneNumber, excludeUserId = n
     }
     const existing = await pool.query(query, params);
     if (existing.rows.length > 0) {
-      throw new Error(`Email address '${email}' is already in use by another account.`);
+      throw new Error(
+        `Email address '${email}' is already in use by another account.`,
+      );
     }
   }
 
@@ -127,7 +132,31 @@ async function checkUserUniqueness(pool, { email, phoneNumber, excludeUserId = n
     }
     const existing = await pool.query(query, params);
     if (existing.rows.length > 0) {
-      throw new Error(`Phone number '${phoneNumber}' is already in use by another account.`);
+      throw new Error(
+        `Phone number '${phoneNumber}' is already in use by another account.`,
+      );
+    }
+  }
+}
+
+async function checkOrganizationUniqueness(
+  pool,
+  { name, excludeOrgId = null },
+) {
+  if (name && name.trim()) {
+    const cleanName = name.trim().toLowerCase();
+    let query =
+      "SELECT id, name FROM organizations WHERE LOWER(TRIM(name)) = $1";
+    const params = [cleanName];
+    if (excludeOrgId) {
+      query += " AND id != $2";
+      params.push(excludeOrgId);
+    }
+    const existing = await pool.query(query, params);
+    if (existing.rows.length > 0) {
+      throw new Error(
+        `An organization named '${name.trim()}' is already registered. Please use a unique organization name.`,
+      );
     }
   }
 }
@@ -139,4 +168,5 @@ module.exports = {
   validateLocationName,
   validateOrgName,
   checkUserUniqueness,
+  checkOrganizationUniqueness,
 };

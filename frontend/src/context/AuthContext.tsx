@@ -25,6 +25,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<boolean>;
+  register: (payload: any) => Promise<boolean>;
   logout: () => void;
   updateCurrentUser: (userData: Partial<User>) => void;
   loading: boolean;
@@ -37,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
   login: async () => false,
+  register: async () => false,
   logout: () => {},
   updateCurrentUser: () => {},
   loading: false,
@@ -117,6 +119,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const register = async (payload: any): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Registration failed");
+      }
+
+      const data = await res.json();
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem("eridss_user", JSON.stringify(data.user));
+      localStorage.setItem("eridss_token", data.token);
+      return true;
+    } catch (err: any) {
+      setError(err.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -146,6 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user,
         token,
         login,
+        register,
         logout,
         updateCurrentUser,
         loading,

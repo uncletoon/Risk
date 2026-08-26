@@ -6,7 +6,36 @@ const {
   authenticateUser,
   getUserById,
   updateUserProfile,
+  registerRiskOfficer,
 } = require("../services/authService");
+
+const register = async (req, res) => {
+  try {
+    const {
+      full_name,
+      fullName,
+      email,
+      phone_number,
+      phoneNumber,
+      gender,
+      password,
+      organization,
+    } = req.body;
+
+    const result = await registerRiskOfficer({
+      fullName: fullName || full_name,
+      email,
+      phoneNumber: phoneNumber || phone_number,
+      gender,
+      password,
+      organization,
+    });
+
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message || "Registration failed" });
+  }
+};
 
 const login = async (req, res) => {
   try {
@@ -55,6 +84,7 @@ const updateProfile = async (req, res) => {
 };
 
 module.exports = {
+  register,
   login,
   getMe,
   updateProfile,

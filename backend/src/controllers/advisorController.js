@@ -1,10 +1,12 @@
 // ============================================================================
 // AI Risk Advisor Controller
-// Grounded in the specific assessment's stored facts, scores, and evidence
+// Grounded strictly in the specific assessment's stored facts, scores, and evidence
 // ============================================================================
 
 const { getAssessmentDetails } = require('../services/assessmentService');
 const { queryContextualAdvisor } = require('../integrations/gemini/geminiService');
+
+const isUserAdmin = (user) => user?.role === 'SYSTEM_ADMIN' || user?.role === 'ADMIN';
 
 const askAdvisor = async (req, res) => {
   try {
@@ -14,8 +16,14 @@ const askAdvisor = async (req, res) => {
       return res.status(400).json({ message: 'assessmentId and question are required' });
     }
 
+    const id = parseInt(assessmentId, 10);
     // Retrieve full assessment context
-    const assessmentData = await getAssessmentDetails(parseInt(assessmentId, 10));
+    const assessmentData = await getAssessmentDetails(id);
+
+    // Verify tenant ownership
+    if (!isUserAdmin(req.user) && assessmentData.assessment.organization_id !== req.user?.organization_id) {
+      return res.status(403).json({ message: 'Forbidden: Access denied to assessment from another organization' });
+    }
 
     const assessmentSummary = {
       organization: {

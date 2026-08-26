@@ -23,6 +23,7 @@ const {
   validateOrgName,
   validateEmail,
   validateLocationName,
+  checkOrganizationUniqueness,
 } = require("../utils/validation");
 
 async function createOrganization({
@@ -37,6 +38,8 @@ async function createOrganization({
   product_types,
 }) {
   const cleanName = validateOrgName(name);
+  await checkOrganizationUniqueness(pool, { name: cleanName });
+
   const cleanDistrict = district
     ? validateLocationName(district, "District")
     : "";
@@ -77,6 +80,12 @@ async function updateOrganization(
   },
 ) {
   const cleanName = name ? validateOrgName(name) : null;
+  if (cleanName) {
+    await checkOrganizationUniqueness(pool, {
+      name: cleanName,
+      excludeOrgId: id,
+    });
+  }
   const cleanDistrict = district
     ? validateLocationName(district, "District")
     : null;

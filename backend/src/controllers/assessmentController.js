@@ -1,5 +1,6 @@
 // ============================================================================
 // Assessment Controller
+// Enforces multi-tenant organizational access control
 // ============================================================================
 
 const {
@@ -10,10 +11,16 @@ const {
   getAssessments,
 } = require('../services/assessmentService');
 
+const isUserAdmin = (user) => user?.role === 'SYSTEM_ADMIN' || user?.role === 'ADMIN';
+
 const createAssessmentHandler = async (req, res) => {
   try {
     const { organizationId, title } = req.body;
-    const orgId = organizationId || req.user?.organization_id;
+    const isSysAdmin = isUserAdmin(req.user);
+    const orgId = isSysAdmin
+      ? (organizationId || req.user?.organization_id)
+      : req.user?.organization_id;
+
     if (!orgId) {
       return res.status(400).json({ message: 'Organization ID is required' });
     }
@@ -35,6 +42,12 @@ const uploadDocumentHandler = async (req, res) => {
   try {
     const assessmentId = parseInt(req.params.id, 10);
     const allowReplace = req.query.replace === 'true';
+
+    // Verify ownership
+    const details = await getAssessmentDetails(assessmentId);
+    if (!isUserAdmin(req.user) && details.assessment.organization_id !== req.user?.organization_id) {
+      return res.status(403).json({ message: 'Forbidden: You do not have permission to modify this assessment.' });
+    }
 
     if (!req.file) {
       return res.status(400).json({ message: 'No document uploaded. Please attach a PDF, DOCX, XLSX, or CSV file.' });
@@ -62,7 +75,13 @@ const startAssessmentPipelineHandler = async (req, res) => {
     const assessmentId = parseInt(req.params.id, 10);
     const userId = req.user?.id;
 
-    // Run pipeline synchronously or return status after initiation
+    // Verify ownership
+    const details = await getAssessmentDetails(assessmentId);
+    if (!isUserAdmin(req.user) && details.assessment.organization_id !== req.user?.organization_id) {
+      return res.status(403).json({ message: 'Forbidden: You do not have permission to process this assessment.' });
+    }
+
+    // Run pipeline synchronously
     const result = await runAssessmentPipeline(assessmentId, userId);
 
     res.json({
@@ -85,6 +104,12 @@ const getAssessmentDetailsHandler = async (req, res) => {
   try {
     const assessmentId = parseInt(req.params.id, 10);
     const details = await getAssessmentDetails(assessmentId);
+
+    // Verify ownership
+    if (!isUserAdmin(req.user) && details.assessment.organization_id !== req.user?.organization_id) {
+      return res.status(404).json({ message: 'Assessment not found' });
+    }
+
     res.json(details);
   } catch (err) {
     console.error('getAssessmentDetails error:', err);
@@ -96,6 +121,12 @@ const getAssessmentStatusHandler = async (req, res) => {
   try {
     const assessmentId = parseInt(req.params.id, 10);
     const details = await getAssessmentDetails(assessmentId);
+
+    // Verify ownership
+    if (!isUserAdmin(req.user) && details.assessment.organization_id !== req.user?.organization_id) {
+      return res.status(404).json({ message: 'Assessment not found' });
+    }
+
     res.json({
       id: details.assessment.id,
       title: details.assessment.title,
@@ -113,7 +144,11 @@ const getAssessmentStatusHandler = async (req, res) => {
 
 const listAssessmentsHandler = async (req, res) => {
   try {
-    const orgId = req.query.organizationId || (req.user?.role !== 'SYSTEM_ADMIN' ? req.user?.organization_id : null);
+    const isSysAdmin = isUserAdmin(req.user);
+    const orgId = isSysAdmin
+      ? (req.query.organizationId ? parseInt(req.query.organizationId, 10) : null)
+      : req.user?.organization_id;
+
     const assessments = await getAssessments(orgId);
     res.json(assessments);
   } catch (err) {

@@ -6,7 +6,11 @@ const { getDashboardMetrics } = require('../services/dashboardService');
 
 const getDashboard = async (req, res) => {
   try {
-    const orgId = req.query.organizationId || (req.user?.role !== 'SYSTEM_ADMIN' ? req.user?.organization_id : null);
+    const isSysAdmin = req.user?.role === 'SYSTEM_ADMIN' || req.user?.role === 'ADMIN';
+    const orgId = isSysAdmin
+      ? (req.query.organizationId ? parseInt(req.query.organizationId, 10) : null)
+      : req.user?.organization_id;
+
     const metrics = await getDashboardMetrics(orgId);
     res.json(metrics);
   } catch (err) {

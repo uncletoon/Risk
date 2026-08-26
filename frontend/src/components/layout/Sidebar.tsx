@@ -28,13 +28,16 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, isSystemAdmin } = useAuth();
   const [orgName, setOrgName] = useState(
-    user?.organization_name || "RWANDA KABUHARIWE",
+    user?.organization_name || "Enterprise",
   );
   const [orgIndustry, setOrgIndustry] = useState(
     "Financial & Enterprise Services",
   );
 
   useEffect(() => {
+    if (user?.organization_name) {
+      setOrgName(user.organization_name);
+    }
     const loadOrg = async () => {
       try {
         const orgs = await api.getOrganizations();

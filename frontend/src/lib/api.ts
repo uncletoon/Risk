@@ -251,7 +251,37 @@ export const api = {
     return handleResponse<{ question: string; answer: string; timestamp: string }>(res);
   },
 
-  // Profile
+  // Auth & Profile
+  register: async (data: {
+    fullName: string;
+    email: string;
+    phoneNumber?: string;
+    gender?: string;
+    password: string;
+    organization: {
+      name: string;
+      industry?: string;
+      businessType?: string;
+      business_type?: string;
+      district?: string;
+      sector?: string;
+      streetNumber?: string;
+      street_number?: string;
+      productTypes?: string;
+      product_types?: string;
+      contactEmail?: string;
+      contact_email?: string;
+      description?: string;
+    };
+  }) => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<{ token: string; user: any }>(res);
+  },
+
   updateUserProfile: async (data: { full_name?: string; email?: string; phone_number?: string; gender?: string }) => {
     const res = await fetch('/api/auth/profile', {
       method: 'PUT',

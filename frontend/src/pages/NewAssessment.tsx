@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 
 export default function NewAssessment() {
-  const { user } = useAuth();
+  const { user, isSystemAdmin } = useAuth();
   const navigate = useNavigate();
 
   const [organizations, setOrganizations] = useState<any[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<number>(user?.organization_id || 1);
+  const [selectedOrgId, setSelectedOrgId] = useState<number>(user?.organization_id || 0);
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -27,7 +27,7 @@ export default function NewAssessment() {
 
   useEffect(() => {
     fetchOrgs();
-  }, []);
+  }, [user]);
 
   const fetchOrgs = async () => {
     try {
@@ -99,13 +99,19 @@ export default function NewAssessment() {
       return;
     }
 
+    const orgId = isSystemAdmin ? selectedOrgId : (user?.organization_id || selectedOrgId);
+    if (!orgId) {
+      setError('No organization profile found for this account.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       setStatusMessage('Creating assessment session in database...');
       const assessment = await api.createAssessment({
-        organizationId: selectedOrgId || 1,
+        organizationId: orgId,
         title: title || 'Comprehensive Enterprise Risk Assessment',
       });
 
@@ -169,7 +175,7 @@ export default function NewAssessment() {
             <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
               Organization
             </label>
-            {organizations.length > 1 ? (
+            {isSystemAdmin && organizations.length > 1 ? (
               <select
                 value={selectedOrgId}
                 onChange={(e) => setSelectedOrgId(Number(e.target.value))}
@@ -184,7 +190,9 @@ export default function NewAssessment() {
             ) : (
               <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-bold text-primary">
                 <Building2 className="w-4 h-4 text-secondary shrink-0" />
-                <span className="truncate">{activeOrg?.name || 'RWANDA KABUHARIWE'} ({activeOrg?.industry || 'Financial & Enterprise Services'})</span>
+                <span className="truncate">
+                  {user?.organization_name || activeOrg?.name || 'Enterprise'} {activeOrg?.industry ? `(${activeOrg.industry})` : ''}
+                </span>
               </div>
             )}
           </div>
@@ -198,69 +206,65 @@ export default function NewAssessment() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. FY2026 Comprehensive Enterprise Risk Audit"
-              className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              placeholder="e.g. 2026 Comprehensive Enterprise Risk Review"
+              className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             />
           </div>
         </div>
 
-        {/* Drag & Drop File Zone */}
+        {/* Drag and Drop Zone */}
         <div>
           <label className="block text-xs font-black uppercase tracking-wider text-primary mb-1.5">
-            Attach Single Enterprise Document (PDF, DOCX, XLSX, CSV)
+            Attach Single Assessment Document
           </label>
           <div
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center transition-all ${
+            className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center transition-all duration-200 ${
               dragActive
-                ? 'border-secondary bg-secondary-container/10'
+                ? 'border-primary bg-primary/5'
                 : file
                 ? 'border-tertiary-fixed-dim/60 bg-tertiary-container/10'
-                : 'border-outline-variant hover:border-primary bg-surface-container-low'
+                : 'border-outline-variant hover:border-primary/50 bg-surface-container-low'
             }`}
           >
             {file ? (
-              <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="w-12 h-12 rounded-xl bg-tertiary-container/20 text-on-tertiary-container flex items-center justify-center">
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-2xl bg-tertiary-container/30 text-on-tertiary-container flex items-center justify-center mb-3">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-primary">{file.name}</p>
-                  <p className="text-xs font-semibold text-on-surface-variant">
-                    {(file.size / (1024 * 1024)).toFixed(2)} MB • {file.type || 'Document'}
-                  </p>
-                </div>
+                <p className="text-sm font-extrabold text-primary">{file.name}</p>
+                <p className="text-xs text-on-surface-variant font-medium mt-1">
+                  {(file.size / (1024 * 1024)).toFixed(2)} MB • Ready for ingestion
+                </p>
                 <button
                   type="button"
                   onClick={() => setFile(null)}
-                  className="mt-2 text-xs font-bold text-error hover:underline cursor-pointer"
+                  className="mt-3 text-xs font-bold text-secondary hover:underline cursor-pointer"
                 >
-                  Choose a different document
+                  Change Attached Document
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-surface-container text-primary flex items-center justify-center">
-                  <UploadCloud className="w-6 h-6 text-secondary" />
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-2xl bg-surface-container text-on-surface-variant flex items-center justify-center mb-3">
+                  <UploadCloud className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-primary">
-                    Drag and drop your single enterprise document here
-                  </p>
-                  <p className="text-xs text-on-surface-variant font-medium mt-0.5">
-                    Supports PDF, DOCX, XLSX, and CSV (Up to 25MB)
-                  </p>
-                </div>
-                <label className="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant hover:bg-surface-container-high text-xs font-bold text-primary transition-colors cursor-pointer inline-block shadow-xs">
-                  <span>Browse Document</span>
+                <p className="text-sm font-extrabold text-primary">
+                  Drag and drop your enterprise business document here
+                </p>
+                <p className="text-xs text-on-surface-variant font-medium mt-1">
+                  Supported formats: PDF, DOCX, XLSX, CSV (Max 25MB)
+                </p>
+                <label className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant text-xs font-bold text-primary cursor-pointer transition-colors">
+                  <span>Browse File</span>
                   <input
                     type="file"
+                    className="hidden"
                     accept=".pdf,.docx,.xlsx,.xls,.csv"
                     onChange={handleFileChange}
-                    className="hidden"
                   />
                 </label>
               </div>
@@ -268,18 +272,25 @@ export default function NewAssessment() {
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end pt-4 border-t border-outline-variant">
+        {/* Submit */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-outline-variant">
+          <p className="text-xs text-on-surface-variant font-semibold text-center sm:text-left">
+            {statusMessage || 'Click execute to trigger autonomous Gemini fact extraction & calculations.'}
+          </p>
+
           <button
             type="submit"
             disabled={loading || !file}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-40 shadow-sm transition-all cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-all cursor-pointer shadow-sm"
           >
             {loading ? (
-              <span>{statusMessage || 'Processing Assessment...'}</span>
+              <>
+                <div className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></div>
+                <span>Processing Pipeline...</span>
+              </>
             ) : (
               <>
-                <span>Launch Risk Assessment Pipeline</span>
+                <span>Execute Risk Assessment</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

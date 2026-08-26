@@ -72,8 +72,158 @@ const {
   validateFullName,
   validateEmail,
   validatePhoneNumber,
+  validateOrgName,
+  validateLocationName,
   checkUserUniqueness,
+  checkOrganizationUniqueness,
 } = require("../utils/validation");
+
+async function registerRiskOfficer({
+  fullName,
+  full_name,
+  email,
+  phoneNumber,
+  phone_number,
+  gender,
+  password,
+  organization,
+}) {
+  const name = validateFullName(fullName || full_name);
+  const cleanEmail = validateEmail(email, true);
+  const phone = validatePhoneNumber(phoneNumber || phone_number);
+
+  if (!password || password.length < 6) {
+    throw new Error("Password must be at least 6 characters long.");
+  }
+
+  if (!organization || typeof organization !== "object") {
+    throw new Error(
+      "Enterprise business information is required to complete registration.",
+    );
+  }
+
+  const orgName = validateOrgName(organization.name);
+  const industry = (
+    organization.industry || "Financial & Enterprise Services"
+  ).trim();
+  const businessType = (
+    organization.business_type ||
+    organization.businessType ||
+    "Microfinance & Digital Lending"
+  ).trim();
+  const district = organization.district
+    ? validateLocationName(organization.district, "District")
+    : "Nyarugenge";
+  const sector = organization.sector
+    ? validateLocationName(organization.sector, "Sector")
+    : "Nyarugenge";
+  const streetNumber = (
+    organization.street_number ||
+    organization.streetNumber ||
+    ""
+  ).trim();
+  const productTypes = (
+    organization.product_types ||
+    organization.productTypes ||
+    ""
+  ).trim();
+  const contactEmail = organization.contact_email
+    ? validateEmail(organization.contact_email, false)
+    : "";
+  const description = (organization.description || "").trim();
+
+  // Validate uniqueness
+  await checkUserUniqueness(pool, { email: cleanEmail, phoneNumber: phone });
+  await checkOrganizationUniqueness(pool, { name: orgName });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Create Organization
+    const orgRes = await client.query(
+      `INSERT INTO organizations (name, industry, description, contact_email, business_type, district, sector, street_number, product_types)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [
+        orgName,
+        industry,
+        description,
+        contactEmail,
+        businessType,
+        district,
+        sector,
+        streetNumber,
+        productTypes,
+      ],
+    );
+    const newOrg = orgRes.rows[0];
+
+    // 2. Hash Password and Create User
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userRes = await client.query(
+      `INSERT INTO users (organization_id, full_name, email, password, phone_number, gender, role, department, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'RISK_OFFICER', 'Risk Management', 'active')
+       RETURNING id, organization_id, full_name, email, phone_number, gender, role, department, status, created_at`,
+      [newOrg.id, name, cleanEmail, hashedPassword, phone, gender || "Male"],
+    );
+    const newUser = userRes.rows[0];
+
+    // 3. Log Audit
+    await client.query(
+      `INSERT INTO audit_logs (user_id, organization_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        newUser.id,
+        newOrg.id,
+        "USER_REGISTERED",
+        "users",
+        newUser.id,
+        JSON.stringify({
+          email: cleanEmail,
+          organization_name: newOrg.name,
+          role: "RISK_OFFICER",
+        }),
+      ],
+    );
+
+    await client.query("COMMIT");
+
+    // 4. Generate JWT
+    const token = jwt.sign(
+      {
+        id: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+        organization_id: newOrg.id,
+        full_name: newUser.full_name,
+      },
+      JWT_SECRET,
+      { expiresIn: "24h" },
+    );
+
+    return {
+      token,
+      user: {
+        id: newUser.id,
+        organization_id: newOrg.id,
+        organization_name: newOrg.name,
+        full_name: newUser.full_name,
+        email: newUser.email,
+        phone_number: newUser.phone_number,
+        gender: newUser.gender,
+        role: newUser.role,
+        department: newUser.department,
+        status: newUser.status,
+      },
+    };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
 async function updateUserProfile(
   userId,
@@ -138,5 +288,6 @@ module.exports = {
   authenticateUser,
   getUserById,
   updateUserProfile,
+  registerRiskOfficer,
   JWT_SECRET,
 };

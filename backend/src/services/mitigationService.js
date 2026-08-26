@@ -6,7 +6,7 @@ const { pool } = require('../config/db');
 const { logAudit } = require('./auditService');
 const { MITIGATION_STATUSES } = require('../constants/riskConstants');
 
-async function createMitigationAction(payload) {
+async function createMitigationAction(payload, userOrgId = null) {
   const assessmentId = payload.assessmentId || payload.assessment_id;
   const identifiedRiskId = payload.identifiedRiskId || payload.identified_risk_id || null;
   const recommendationId = payload.recommendationId || payload.recommendation_id || null;
@@ -22,9 +22,16 @@ async function createMitigationAction(payload) {
 
   let finalAssessmentId = assessmentId;
   if (!finalAssessmentId) {
-    const latestAssess = await pool.query('SELECT id, organization_id FROM assessments ORDER BY id DESC LIMIT 1');
+    let query = 'SELECT id, organization_id FROM assessments';
+    const params = [];
+    if (userOrgId) {
+      query += ' WHERE organization_id = $1';
+      params.push(userOrgId);
+    }
+    query += ' ORDER BY id DESC LIMIT 1';
+    const latestAssess = await pool.query(query, params);
     if (latestAssess.rows.length === 0) {
-      throw new Error('Assessment not found. Please create an assessment first.');
+      throw new Error('No assessments found for your organization. Please create an assessment first.');
     }
     finalAssessmentId = latestAssess.rows[0].id;
   }
@@ -34,6 +41,10 @@ async function createMitigationAction(payload) {
     throw new Error('Assessment not found');
   }
   const orgId = assessRes.rows[0].organization_id;
+
+  if (userOrgId && orgId !== userOrgId) {
+    throw new Error('Forbidden: You can only create mitigations for your own organization.');
+  }
 
   const res = await pool.query(
     `INSERT INTO mitigation_actions (
@@ -63,12 +74,22 @@ async function createMitigationAction(payload) {
   return action;
 }
 
-async function updateMitigationAction(id, updates, userId) {
-  const currentRes = await pool.query('SELECT * FROM mitigation_actions WHERE id = $1', [id]);
+async function updateMitigationAction(id, updates, userId, userOrgId = null) {
+  const currentRes = await pool.query(
+    `SELECT m.*, a.organization_id 
+     FROM mitigation_actions m
+     JOIN assessments a ON m.assessment_id = a.id
+     WHERE m.id = $1`,
+    [id]
+  );
   if (currentRes.rows.length === 0) {
     throw new Error('Mitigation action not found');
   }
   const current = currentRes.rows[0];
+
+  if (userOrgId && current.organization_id !== userOrgId) {
+    throw new Error('Forbidden: Access denied to mitigation from another organization');
+  }
 
   // If already completed (100%), lock from modification as per business requirement
   if (current.progress_pct === 100 || current.status === 'COMPLETED') {
@@ -136,19 +157,26 @@ async function updateMitigationAction(id, updates, userId) {
   );
 
   const updated = res.rows[0];
-  await logAudit(userId, null, 'MITIGATION_ACTION_UPDATED', 'mitigation_actions', id, { status: computedStatus, progress_pct: computedProgress });
+  await logAudit(userId, current.organization_id, 'MITIGATION_ACTION_UPDATED', 'mitigation_actions', id, { status: computedStatus, progress_pct: computedProgress });
   return updated;
 }
 
-async function getMitigationsByAssessment(assessmentId) {
-  const res = await pool.query(
-    `SELECT m.*, r.risk_name, r.category_code, r.residual_risk, r.residual_classification
-     FROM mitigation_actions m
-     LEFT JOIN identified_risks r ON m.identified_risk_id = r.id
-     WHERE m.assessment_id = $1
-     ORDER BY m.created_at DESC`,
-    [assessmentId]
-  );
+async function getMitigationsByAssessment(assessmentId, userOrgId = null) {
+  let query = `
+    SELECT m.*, r.risk_name, r.category_code, r.residual_risk, r.residual_classification
+    FROM mitigation_actions m
+    JOIN assessments a ON m.assessment_id = a.id
+    LEFT JOIN identified_risks r ON m.identified_risk_id = r.id
+    WHERE m.assessment_id = $1
+  `;
+  const params = [assessmentId];
+  if (userOrgId) {
+    query += ' AND a.organization_id = $2';
+    params.push(userOrgId);
+  }
+  query += ' ORDER BY m.created_at DESC';
+
+  const res = await pool.query(query, params);
   return res.rows;
 }
 
@@ -195,7 +223,14 @@ async function getMitigationStats(organizationId = null) {
     params
   );
 
-  return res.rows[0];
+  return res.rows[0] || {
+    total_actions: 0,
+    pending_count: 0,
+    in_progress_count: 0,
+    completed_count: 0,
+    cancelled_count: 0,
+    average_progress: 0,
+  };
 }
 
 module.exports = {

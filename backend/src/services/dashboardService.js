@@ -1,5 +1,6 @@
 // ============================================================================
 // Dashboard Analytics Service
+// Strictly isolated multi-tenant metrics per organization
 // ============================================================================
 
 const { pool } = require('../config/db');
@@ -10,9 +11,9 @@ async function getDashboardMetrics(organizationId = null) {
     params.push(organizationId);
   }
 
-  // 1. Fetch Latest Completed Assessment (scoped to org, fallback to latest overall)
-  let latestRes = await pool.query(
-    `SELECT a.*, o.name as org_name
+  // 1. Fetch Latest Completed Assessment (strictly scoped to org if provided)
+  const latestRes = await pool.query(
+    `SELECT a.*, o.name as org_name, o.industry as org_industry
      FROM assessments a
      JOIN organizations o ON a.organization_id = o.id
      ${organizationId ? 'WHERE a.organization_id = $1 AND a.status = \'COMPLETED\'' : 'WHERE a.status = \'COMPLETED\''}
@@ -21,21 +22,9 @@ async function getDashboardMetrics(organizationId = null) {
     params
   );
 
-  if (latestRes.rows.length === 0 && organizationId) {
-    // Fallback without org filter if none under this specific orgId
-    latestRes = await pool.query(
-      `SELECT a.*, o.name as org_name
-       FROM assessments a
-       JOIN organizations o ON a.organization_id = o.id
-       WHERE a.status = 'COMPLETED'
-       ORDER BY a.completed_at DESC NULLS LAST, a.created_at DESC
-       LIMIT 1`
-    );
-  }
-
   const latestAssessment = latestRes.rows[0] || null;
 
-  // 2. Fetch Category Scores for latest assessment
+  // 2. Fetch Category Scores & Top Risks for the latest assessment
   let categoryScores = [];
   let topRisks = [];
   if (latestAssessment) {
@@ -61,7 +50,7 @@ async function getDashboardMetrics(organizationId = null) {
     topRisks = topRisksRes.rows;
   }
 
-  // 3. Mitigation Stats
+  // 3. Mitigation Stats (strictly scoped to org if provided)
   const mitRes = await pool.query(
     `SELECT 
        COUNT(*) as total_actions,
@@ -74,7 +63,7 @@ async function getDashboardMetrics(organizationId = null) {
     params
   );
 
-  // 4. Longitudinal History / Trend
+  // 4. Longitudinal History / Trend (strictly scoped to org if provided)
   const histRes = await pool.query(
     `SELECT id, assessment_id, version_label, overall_eri, eri_classification, snapshot_date
      FROM assessment_history
@@ -84,18 +73,7 @@ async function getDashboardMetrics(organizationId = null) {
     params
   );
 
-  let historyTrend = histRes.rows;
-  if (historyTrend.length === 0) {
-    const allHist = await pool.query(
-      `SELECT id, assessment_id, version_label, overall_eri, eri_classification, snapshot_date
-       FROM assessment_history
-       ORDER BY snapshot_date ASC
-       LIMIT 10`
-    );
-    historyTrend = allHist.rows;
-  }
-
-  // 5. Total Assessments count
+  // 5. Total Assessments count (strictly scoped to org if provided)
   const countRes = await pool.query(
     `SELECT 
        COUNT(*) as total_assessments,
@@ -110,9 +88,19 @@ async function getDashboardMetrics(organizationId = null) {
     latestAssessment,
     categoryScores,
     topRisks,
-    mitigationStats: mitRes.rows[0] || {},
-    historyTrend: historyTrend || [],
-    assessmentStats: countRes.rows[0] || {},
+    mitigationStats: mitRes.rows[0] || {
+      total_actions: 0,
+      pending_count: 0,
+      in_progress_count: 0,
+      completed_count: 0,
+      average_progress: 0,
+    },
+    historyTrend: histRes.rows || [],
+    assessmentStats: countRes.rows[0] || {
+      total_assessments: 0,
+      completed_count: 0,
+      active_processing_count: 0,
+    },
   };
 }
 
