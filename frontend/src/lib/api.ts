@@ -9,6 +9,11 @@ export interface Assessment {
   org_industry?: string;
   org_description?: string;
   title: string;
+  target_type?: 'ENTERPRISE' | 'SINGLE_USER';
+  client_name?: string;
+  client_identifier?: string;
+  rule_group_id?: number;
+  rule_group_name?: string;
   status: 'UPLOADED' | 'PROCESSING' | 'EXTRACTING' | 'ASSESSING' | 'ANALYZING' | 'COMPLETED' | 'FAILED';
   progress_step?: string;
   failure_reason?: string;
@@ -22,6 +27,17 @@ export interface Assessment {
   mitigation_count?: number;
   created_at: string;
   completed_at?: string;
+}
+
+export interface RuleGroup {
+  id: number;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  rules_count?: number;
+  active_rules_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ExtractedFact {
@@ -170,7 +186,16 @@ export const api = {
     return handleResponse<AssessmentDetailsResponse>(res);
   },
 
-  createAssessment: async (data: { organizationId: number; title: string }) => {
+  createAssessment: async (data: {
+    organizationId: number;
+    title?: string;
+    clientName?: string;
+    client_name?: string;
+    clientIdentifier?: string;
+    client_identifier?: string;
+    ruleGroupId?: number;
+    rule_group_id?: number;
+  }) => {
     const res = await fetch('/api/assessments', {
       method: 'POST',
       headers: getAuthHeader(),
@@ -439,6 +464,32 @@ export const api = {
     return handleResponse<any[]>(res);
   },
 
+  createAdminCategory: async (data: { code: string; name: string; defaultWeight?: number; default_weight?: number; description?: string; isActive?: boolean; is_active?: boolean }) => {
+    const res = await fetch('/api/admin/categories', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  updateAdminCategory: async (code: string, data: { name?: string; defaultWeight?: number; default_weight?: number; description?: string; isActive?: boolean; is_active?: boolean }) => {
+    const res = await fetch(`/api/admin/categories/${code}`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  deleteAdminCategory: async (code: string) => {
+    const res = await fetch(`/api/admin/categories/${code}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    });
+    return handleResponse<{ success: boolean; message?: string }>(res);
+  },
+
   updateAdminCategoryWeight: async (code: string, defaultWeight: number) => {
     const res = await fetch(`/api/admin/categories/${code}/weight`, {
       method: 'PUT',
@@ -457,8 +508,42 @@ export const api = {
     return handleResponse<any[]>(res);
   },
 
-  getAdminRules: async () => {
-    const res = await fetch('/api/admin/rules', { headers: getAuthHeader() });
+  // Risk Rule Groups Management
+  getAdminRuleGroups: async () => {
+    const res = await fetch('/api/admin/rule-groups', { headers: getAuthHeader() });
+    return handleResponse<RuleGroup[]>(res);
+  },
+
+  createAdminRuleGroup: async (data: { name: string; description?: string; isActive?: boolean }) => {
+    const res = await fetch('/api/admin/rule-groups', {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<RuleGroup>(res);
+  },
+
+  updateAdminRuleGroup: async (id: number, data: Partial<RuleGroup>) => {
+    const res = await fetch(`/api/admin/rule-groups/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<RuleGroup>(res);
+  },
+
+  deleteAdminRuleGroup: async (id: number) => {
+    const res = await fetch(`/api/admin/rule-groups/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    });
+    return handleResponse<{ success: boolean; message: string }>(res);
+  },
+
+  // Deterministic Rules Management
+  getAdminRules: async (groupId?: number) => {
+    const url = groupId ? `/api/admin/rules?groupId=${groupId}` : '/api/admin/rules';
+    const res = await fetch(url, { headers: getAuthHeader() });
     return handleResponse<any[]>(res);
   },
 

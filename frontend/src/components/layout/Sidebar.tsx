@@ -264,6 +264,40 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <span>Audit-Ready Reports</span>
               </NavLink>
 
+              <div className="px-3 pt-2 pb-1 text-[10px] font-black uppercase tracking-wider text-on-primary-container/80">
+                Risk Rules & Scoring Engine
+              </div>
+
+              <NavLink
+                to="/admin/categories"
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
+                  }`
+                }
+              >
+                <Sliders className="w-4 h-4" />
+                <span>Risk Categories & Weights</span>
+              </NavLink>
+
+              <NavLink
+                to="/admin/rules"
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? "text-secondary-container bg-surface-container-highest/25 font-bold shadow-xs"
+                      : "text-on-primary-container hover:text-surface-container-lowest hover:bg-surface-container-highest/15"
+                  }`
+                }
+              >
+                <Scale className="w-4 h-4" />
+                <span>Risk Rules Engine</span>
+              </NavLink>
+
               <NavLink
                 to="/organization"
                 onClick={handleNavClick}

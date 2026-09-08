@@ -225,9 +225,159 @@ async function updateUserStatus(userId, status, adminUserId) {
 
 async function getCategories() {
   const res = await pool.query(
-    "SELECT * FROM risk_categories ORDER BY code ASC",
+    "SELECT * FROM risk_categories ORDER BY is_active DESC, code ASC",
   );
   return res.rows;
+}
+
+async function createCategory(
+  {
+    code,
+    name,
+    defaultWeight,
+    default_weight,
+    description,
+    isActive,
+    is_active,
+  },
+  adminUserId,
+) {
+  const cleanCode = (code || "")
+    .toUpperCase()
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Z0-9_]/g, "");
+  const cleanName = (name || "").trim();
+  const weight = parseFloat(
+    defaultWeight !== undefined ? defaultWeight : default_weight || 0,
+  );
+  const active =
+    isActive !== undefined
+      ? isActive
+      : is_active !== undefined
+        ? is_active
+        : true;
+
+  if (!cleanCode) {
+    throw new Error("Category code is required (alphanumeric uppercase).");
+  }
+  if (!cleanName) {
+    throw new Error("Category display name is required.");
+  }
+
+  const existingCheck = await pool.query(
+    "SELECT id FROM risk_categories WHERE code = $1",
+    [cleanCode],
+  );
+  if (existingCheck.rows.length > 0) {
+    throw new Error(`Category with code '${cleanCode}' already exists.`);
+  }
+
+  const res = await pool.query(
+    `INSERT INTO risk_categories (code, name, default_weight, description, is_active)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
+    [cleanCode, cleanName, weight, description || "", active],
+  );
+
+  const newCategory = res.rows[0];
+  await logAudit(
+    adminUserId,
+    null,
+    "CATEGORY_CREATED",
+    "risk_categories",
+    newCategory.id,
+    {
+      code: cleanCode,
+      name: cleanName,
+      default_weight: weight,
+    },
+  );
+
+  return newCategory;
+}
+
+async function updateCategory(code, updates, adminUserId) {
+  const {
+    name,
+    description,
+    defaultWeight,
+    default_weight,
+    isActive,
+    is_active,
+  } = updates;
+  const weight =
+    defaultWeight !== undefined
+      ? parseFloat(defaultWeight)
+      : default_weight !== undefined
+        ? parseFloat(default_weight)
+        : null;
+  const active =
+    isActive !== undefined
+      ? Boolean(isActive)
+      : is_active !== undefined
+        ? Boolean(is_active)
+        : null;
+
+  const res = await pool.query(
+    `UPDATE risk_categories
+     SET name = COALESCE($1, name),
+         description = COALESCE($2, description),
+         default_weight = COALESCE($3, default_weight),
+         is_active = COALESCE($4, is_active),
+         updated_at = NOW()
+     WHERE code = $5
+     RETURNING *`,
+    [
+      name ? name.trim() : null,
+      description !== undefined ? description : null,
+      weight,
+      active,
+      code,
+    ],
+  );
+
+  if (res.rows.length === 0) {
+    throw new Error(`Category with code '${code}' not found.`);
+  }
+
+  const updated = res.rows[0];
+  await logAudit(
+    adminUserId,
+    null,
+    "CATEGORY_UPDATED",
+    "risk_categories",
+    updated.id,
+    updates,
+  );
+  return updated;
+}
+
+async function deleteCategory(code, adminUserId) {
+  const checkRes = await pool.query(
+    "SELECT id FROM risk_categories WHERE code = $1",
+    [code],
+  );
+  if (checkRes.rows.length === 0) {
+    throw new Error(`Category with code '${code}' not found.`);
+  }
+
+  // Delete associated risk rules or cascade
+  await pool.query("DELETE FROM risk_rules WHERE category_code = $1", [code]);
+  await pool.query("DELETE FROM risk_categories WHERE code = $1", [code]);
+
+  await logAudit(
+    adminUserId,
+    null,
+    "CATEGORY_DELETED",
+    "risk_categories",
+    checkRes.rows[0].id,
+    { code },
+  );
+  return {
+    success: true,
+    message: `Category '${code}' and associated rules deleted successfully.`,
+  };
 }
 
 async function updateCategoryWeightsBatch(weightsArray, adminUserId) {
@@ -341,15 +491,166 @@ async function updateCategoryWeight(code, defaultWeight, adminUserId) {
   return res.rows[0];
 }
 
+// --- Risk Rule Groups Management ---
+
+async function getRuleGroups() {
+  const res = await pool.query(`
+    SELECT rg.*, 
+           COUNT(r.id)::int as rules_count,
+           COUNT(r.id) FILTER (WHERE r.is_active = true)::int as active_rules_count
+    FROM rule_groups rg
+    LEFT JOIN risk_rules r ON rg.id = r.rule_group_id
+    GROUP BY rg.id
+    ORDER BY rg.id ASC
+  `);
+  return res.rows;
+}
+
+async function createRuleGroup(
+  { name, description, isActive = true },
+  adminUserId,
+) {
+  const cleanName = (name || "").trim();
+  if (!cleanName) {
+    throw new Error("Rule group name is required.");
+  }
+
+  const dupCheck = await pool.query(
+    "SELECT id FROM rule_groups WHERE LOWER(TRIM(name)) = LOWER($1)",
+    [cleanName],
+  );
+  if (dupCheck.rows.length > 0) {
+    throw new Error(`Rule group with name '${cleanName}' already exists.`);
+  }
+
+  const res = await pool.query(
+    `INSERT INTO rule_groups (name, description, is_active)
+     VALUES ($1, $2, $3)
+     RETURNING *`,
+    [cleanName, description ? description.trim() : "", Boolean(isActive)],
+  );
+  const group = res.rows[0];
+  await logAudit(
+    adminUserId,
+    null,
+    "RULE_GROUP_CREATED",
+    "rule_groups",
+    group.id,
+    {
+      name: cleanName,
+    },
+  );
+  return group;
+}
+
+async function updateRuleGroup(groupId, updates, adminUserId) {
+  const { name, description, is_active, isActive } = updates;
+  const cleanName = name ? name.trim() : null;
+  const active =
+    isActive !== undefined
+      ? Boolean(isActive)
+      : is_active !== undefined
+        ? Boolean(is_active)
+        : null;
+
+  if (cleanName) {
+    const dupCheck = await pool.query(
+      "SELECT id FROM rule_groups WHERE id != $1 AND LOWER(TRIM(name)) = LOWER($2)",
+      [groupId, cleanName],
+    );
+    if (dupCheck.rows.length > 0) {
+      throw new Error(
+        `Another rule group named '${cleanName}' already exists.`,
+      );
+    }
+  }
+
+  const res = await pool.query(
+    `UPDATE rule_groups
+     SET name = COALESCE($1, name),
+         description = COALESCE($2, description),
+         is_active = COALESCE($3, is_active),
+         updated_at = NOW()
+     WHERE id = $4
+     RETURNING *`,
+    [
+      cleanName,
+      description !== undefined ? description : null,
+      active,
+      groupId,
+    ],
+  );
+
+  if (res.rows.length === 0) {
+    throw new Error("Rule group not found");
+  }
+
+  const updated = res.rows[0];
+  await logAudit(
+    adminUserId,
+    null,
+    "RULE_GROUP_UPDATED",
+    "rule_groups",
+    groupId,
+    updates,
+  );
+  return updated;
+}
+
+async function deleteRuleGroup(groupId, adminUserId) {
+  const groupRes = await pool.query("SELECT * FROM rule_groups WHERE id = $1", [
+    groupId,
+  ]);
+  if (groupRes.rows.length === 0) {
+    throw new Error("Rule group not found");
+  }
+
+  // Check if this is the only group
+  const totalGroups = await pool.query("SELECT count(*) FROM rule_groups");
+  if (parseInt(totalGroups.rows[0].count, 10) <= 1) {
+    throw new Error(
+      "Cannot delete the last remaining Rule Group. At least one Rule Group must exist.",
+    );
+  }
+
+  // Delete rules in this group or reassign
+  await pool.query("DELETE FROM risk_rules WHERE rule_group_id = $1", [
+    groupId,
+  ]);
+  await pool.query("DELETE FROM rule_groups WHERE id = $1", [groupId]);
+
+  await logAudit(
+    adminUserId,
+    null,
+    "RULE_GROUP_DELETED",
+    "rule_groups",
+    groupId,
+    {
+      name: groupRes.rows[0].name,
+    },
+  );
+  return {
+    success: true,
+    message: `Rule group '${groupRes.rows[0].name}' and associated rules deleted.`,
+  };
+}
+
 // --- Risk Rules Management ---
 
-async function getRules() {
-  const res = await pool.query(
-    `SELECT r.*, c.name as category_name
-     FROM risk_rules r
-     JOIN risk_categories c ON r.category_code = c.code
-     ORDER BY r.category_code ASC, r.id ASC`,
-  );
+async function getRules(ruleGroupId = null) {
+  let query = `
+    SELECT r.*, c.name as category_name, rg.name as rule_group_name
+    FROM risk_rules r
+    JOIN risk_categories c ON r.category_code = c.code
+    LEFT JOIN rule_groups rg ON r.rule_group_id = rg.id
+  `;
+  const params = [];
+  if (ruleGroupId) {
+    query += ` WHERE r.rule_group_id = $1`;
+    params.push(ruleGroupId);
+  }
+  query += ` ORDER BY r.category_code ASC, r.id ASC`;
+  const res = await pool.query(query, params);
   return res.rows;
 }
 
@@ -363,36 +664,46 @@ async function createRule(
     impactScore,
     severity,
     description,
+    ruleGroupId,
+    rule_group_id,
   },
   adminUserId,
 ) {
   const cleanFactor = (factorName || "").trim();
   const cleanThreshold = (thresholdValue || "").trim();
+  const assignedGroupId = ruleGroupId || rule_group_id || null;
 
   if (!cleanFactor) {
     throw new Error("Risk factor name is required.");
   }
 
-  // Conflict & Duplicate Detection
+  // Conflict & Duplicate Detection within the same rule group and category
   const duplicateCheck = await pool.query(
     `SELECT id, factor_name, condition_operator, threshold_value 
      FROM risk_rules 
      WHERE category_code = $1 
        AND LOWER(TRIM(factor_name)) = LOWER($2) 
        AND condition_operator = $3 
-       AND LOWER(TRIM(threshold_value)) = LOWER($4)`,
-    [categoryCode, cleanFactor, conditionOperator, cleanThreshold],
+       AND LOWER(TRIM(threshold_value)) = LOWER($4)
+       AND (rule_group_id = $5 OR ($5 IS NULL AND rule_group_id IS NULL))`,
+    [
+      categoryCode,
+      cleanFactor,
+      conditionOperator,
+      cleanThreshold,
+      assignedGroupId,
+    ],
   );
 
   if (duplicateCheck.rows.length > 0) {
     throw new Error(
-      `Governance Conflict: A deterministic rule for category '${categoryCode}' with factor '${cleanFactor}' and condition '${conditionOperator} ${cleanThreshold}' already exists (Rule #${duplicateCheck.rows[0].id}).`,
+      `Governance Conflict: A deterministic rule for category '${categoryCode}' with factor '${cleanFactor}' and condition '${conditionOperator} ${cleanThreshold}' already exists in this group (Rule #${duplicateCheck.rows[0].id}).`,
     );
   }
 
   const res = await pool.query(
-    `INSERT INTO risk_rules (category_code, factor_name, condition_operator, threshold_value, likelihood_score, impact_score, severity, description)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO risk_rules (category_code, factor_name, condition_operator, threshold_value, likelihood_score, impact_score, severity, description, rule_group_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
     [
       categoryCode,
@@ -403,12 +714,14 @@ async function createRule(
       impactScore,
       severity || "Moderate",
       description || "",
+      assignedGroupId,
     ],
   );
   const rule = res.rows[0];
   await logAudit(adminUserId, null, "RULE_CREATED", "risk_rules", rule.id, {
     factorName: cleanFactor,
     thresholdValue: cleanThreshold,
+    ruleGroupId: assignedGroupId,
   });
   return rule;
 }
@@ -424,10 +737,15 @@ async function updateRule(ruleId, updates, adminUserId) {
     severity,
     description,
     is_active,
+    rule_group_id,
+    ruleGroupId,
   } = updates;
 
+  const assignedGroupId =
+    ruleGroupId !== undefined ? ruleGroupId : rule_group_id;
+
   if (factor_name || condition_operator || threshold_value || category_code) {
-    // Conflict Check against other existing rules
+    // Conflict Check against other existing rules in the same group
     const currentRuleRes = await pool.query(
       "SELECT * FROM risk_rules WHERE id = $1",
       [ruleId],
@@ -439,6 +757,8 @@ async function updateRule(ruleId, updates, adminUserId) {
     const checkFactor = (factor_name || current.factor_name).trim();
     const checkOperator = condition_operator || current.condition_operator;
     const checkThreshold = (threshold_value || current.threshold_value).trim();
+    const checkGroup =
+      assignedGroupId !== undefined ? assignedGroupId : current.rule_group_id;
 
     const duplicateCheck = await pool.query(
       `SELECT id FROM risk_rules 
@@ -446,13 +766,21 @@ async function updateRule(ruleId, updates, adminUserId) {
          AND category_code = $2 
          AND LOWER(TRIM(factor_name)) = LOWER($3) 
          AND condition_operator = $4 
-         AND LOWER(TRIM(threshold_value)) = LOWER($5)`,
-      [ruleId, checkCategory, checkFactor, checkOperator, checkThreshold],
+         AND LOWER(TRIM(threshold_value)) = LOWER($5)
+         AND (rule_group_id = $6 OR ($6 IS NULL AND rule_group_id IS NULL))`,
+      [
+        ruleId,
+        checkCategory,
+        checkFactor,
+        checkOperator,
+        checkThreshold,
+        checkGroup,
+      ],
     );
 
     if (duplicateCheck.rows.length > 0) {
       throw new Error(
-        `Governance Conflict: Another rule (#${duplicateCheck.rows[0].id}) already defines '${checkFactor}' with '${checkOperator} ${checkThreshold}' in category '${checkCategory}'.`,
+        `Governance Conflict: Another rule (#${duplicateCheck.rows[0].id}) already defines '${checkFactor}' with '${checkOperator} ${checkThreshold}' in this group.`,
       );
     }
   }
@@ -467,8 +795,9 @@ async function updateRule(ruleId, updates, adminUserId) {
          impact_score = COALESCE($6, impact_score),
          severity = COALESCE($7, severity),
          description = COALESCE($8, description),
-         is_active = COALESCE($9, is_active)
-     WHERE id = $10
+         is_active = COALESCE($9, is_active),
+         rule_group_id = COALESCE($10, rule_group_id)
+     WHERE id = $11
      RETURNING *`,
     [
       category_code,
@@ -480,6 +809,7 @@ async function updateRule(ruleId, updates, adminUserId) {
       severity,
       description,
       is_active,
+      assignedGroupId !== undefined ? assignedGroupId : null,
       ruleId,
     ],
   );
@@ -546,8 +876,15 @@ module.exports = {
   updateUser,
   updateUserStatus,
   getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   updateCategoryWeight,
   updateCategoryWeightsBatch,
+  getRuleGroups,
+  createRuleGroup,
+  updateRuleGroup,
+  deleteRuleGroup,
   getRules,
   createRule,
   updateRule,

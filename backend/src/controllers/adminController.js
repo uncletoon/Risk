@@ -9,8 +9,15 @@ const {
   updateUser,
   updateUserStatus,
   getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   updateCategoryWeight,
   updateCategoryWeightsBatch,
+  getRuleGroups,
+  createRuleGroup,
+  updateRuleGroup,
+  deleteRuleGroup,
   getRules,
   createRule,
   updateRule,
@@ -88,6 +95,35 @@ const listCategories = async (req, res) => {
   }
 };
 
+const createNewCategory = async (req, res) => {
+  try {
+    const category = await createCategory(req.body, req.user?.id);
+    res.status(201).json(category);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+const updateCategoryData = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const updated = await updateCategory(code, req.body, req.user?.id);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+const deleteCategoryItem = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const result = await deleteCategory(code, req.user?.id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
 const updateWeight = async (req, res) => {
   try {
     const { code } = req.params;
@@ -113,10 +149,50 @@ const updateWeightsBatch = async (req, res) => {
   }
 };
 
-// Rules Management
+// Risk Rule Groups Management
+const listRuleGroups = async (req, res) => {
+  try {
+    const groups = await getRuleGroups();
+    res.json(groups);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch rule groups", error: err.message });
+  }
+};
+
+const createNewRuleGroup = async (req, res) => {
+  try {
+    const group = await createRuleGroup(req.body, req.user?.id);
+    res.status(201).json(group);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+const updateRuleGroupData = async (req, res) => {
+  try {
+    const group = await updateRuleGroup(req.params.id, req.body, req.user?.id);
+    res.json(group);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+const deleteRuleGroupItem = async (req, res) => {
+  try {
+    const result = await deleteRuleGroup(req.params.id, req.user?.id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// Deterministic Rules Management
 const listRules = async (req, res) => {
   try {
-    const rules = await getRules();
+    const groupId = req.query.groupId || req.query.ruleGroupId || null;
+    const rules = await getRules(groupId);
     res.json(rules);
   } catch (err) {
     res
@@ -213,8 +289,15 @@ module.exports = {
   updateUserData,
   updateUserStatusHandler,
   listCategories,
+  createNewCategory,
+  updateCategoryData,
+  deleteCategoryItem,
   updateWeight,
   updateWeightsBatch,
+  listRuleGroups,
+  createNewRuleGroup,
+  updateRuleGroupData,
+  deleteRuleGroupItem,
   listRules,
   createNewRule,
   updateRuleData,
