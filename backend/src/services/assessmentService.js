@@ -3,79 +3,145 @@
 // Enforces Single-Document Rule, Deterministic Scoring, and Gemini AI Intelligence
 // ============================================================================
 
-const fs = require('fs');
-const path = require('path');
-const { pool } = require('../config/db');
-const { parseDocument } = require('../parsers/documentParser');
-const { evaluateFactsAgainstRules } = require('../engines/risk/ruleEngine');
+const fs = require("fs");
+const path = require("path");
+const { pool } = require("../config/db");
+const { parseDocument } = require("../parsers/documentParser");
+const { evaluateFactsAgainstRules } = require("../engines/risk/ruleEngine");
 const {
   calculateInherentRisk,
   evaluateControlEffectiveness,
   calculateResidualRisk,
   calculateCategoryScores,
   calculateEnterpriseRiskIndex,
-} = require('../engines/risk/calculationEngine');
+} = require("../engines/risk/calculationEngine");
 const {
   extractDocumentFactsAndRisks,
   generatePostCalculationIntelligence,
   queryContextualAdvisor,
-} = require('../integrations/gemini/geminiService');
-const { logAudit } = require('./auditService');
-const { ASSESSMENT_STATUSES } = require('../constants/riskConstants');
+} = require("../integrations/gemini/geminiService");
+const { logAudit } = require("./auditService");
+const { ASSESSMENT_STATUSES } = require("../constants/riskConstants");
 
 /**
- * Creates a new assessment container
+ * Creates a new assessment container (Strictly Single User / Client mode)
  */
-async function createAssessment({ organizationId, userId, title }) {
-  const orgRes = await pool.query('SELECT * FROM organizations WHERE id = $1', [organizationId]);
+async function createAssessment({
+  organizationId,
+  userId,
+  title,
+  clientName = null,
+  client_name = null,
+  clientIdentifier = null,
+  client_identifier = null,
+  ruleGroupId = null,
+  rule_group_id = null,
+}) {
+  const orgRes = await pool.query("SELECT * FROM organizations WHERE id = $1", [
+    organizationId,
+  ]);
   if (orgRes.rows.length === 0) {
     throw new Error(`Organization with ID ${organizationId} does not exist`);
   }
 
+  const cleanClientName = (clientName || client_name || "").trim();
+  const cleanIdentifier = (clientIdentifier || client_identifier || "").trim();
+  const assignedGroupId = ruleGroupId || rule_group_id || null;
+
+  const finalTitle =
+    title && title.trim()
+      ? title.trim()
+      : cleanClientName
+        ? `Client Risk Assessment - ${cleanClientName}`
+        : "Single Client Risk Assessment";
+
   const res = await pool.query(
-    `INSERT INTO assessments (organization_id, created_by_id, title, status, progress_step)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO assessments (
+      organization_id, created_by_id, title, target_type,
+      client_name, client_identifier, rule_group_id,
+      status, progress_step
+    )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
     [
       organizationId,
       userId || null,
-      title || 'Enterprise Risk Assessment',
+      finalTitle,
+      "SINGLE_USER",
+      cleanClientName || null,
+      cleanIdentifier || null,
+      assignedGroupId,
       ASSESSMENT_STATUSES.UPLOADED,
-      'Awaiting Document Upload',
-    ]
+      "Awaiting Document Upload",
+    ],
   );
 
   const assessment = res.rows[0];
-  await logAudit(userId, organizationId, 'ASSESSMENT_CREATED', 'assessments', assessment.id, { title });
+  await logAudit(
+    userId,
+    organizationId,
+    "ASSESSMENT_CREATED",
+    "assessments",
+    assessment.id,
+    {
+      title: assessment.title,
+      targetType: "SINGLE_USER",
+      clientName: assessment.client_name,
+      ruleGroupId: assignedGroupId,
+    },
+  );
   return assessment;
 }
 
 /**
  * Attaches exactly ONE document to an assessment (Enforces Single-Document Rule)
  */
-async function attachDocument({ assessmentId, file, userId, allowReplace = false }) {
+async function attachDocument({
+  assessmentId,
+  file,
+  userId,
+  allowReplace = false,
+}) {
   if (!file) {
-    throw new Error('No document file provided for upload.');
+    throw new Error("No document file provided for upload.");
   }
 
-  const assessRes = await pool.query('SELECT * FROM assessments WHERE id = $1', [assessmentId]);
+  const assessRes = await pool.query(
+    "SELECT * FROM assessments WHERE id = $1",
+    [assessmentId],
+  );
   if (assessRes.rows.length === 0) {
     throw new Error(`Assessment ${assessmentId} not found.`);
   }
   const assessment = assessRes.rows[0];
 
   // Check existing document
-  const existingDocRes = await pool.query('SELECT * FROM documents WHERE assessment_id = $1', [assessmentId]);
+  const existingDocRes = await pool.query(
+    "SELECT * FROM documents WHERE assessment_id = $1",
+    [assessmentId],
+  );
   if (existingDocRes.rows.length > 0) {
-    if (!allowReplace && assessment.status !== ASSESSMENT_STATUSES.UPLOADED && assessment.status !== ASSESSMENT_STATUSES.FAILED) {
-      throw new Error('Single-Document Rule Violation: An assessment may contain exactly ONE uploaded document. Replacing is disallowed after processing has begun.');
+    if (
+      !allowReplace &&
+      assessment.status !== ASSESSMENT_STATUSES.UPLOADED &&
+      assessment.status !== ASSESSMENT_STATUSES.FAILED
+    ) {
+      throw new Error(
+        "Single-Document Rule Violation: An assessment may contain exactly ONE uploaded document. Replacing is disallowed after processing has begun.",
+      );
     }
     // Delete existing document record before replacing
-    await pool.query('DELETE FROM documents WHERE assessment_id = $1', [assessmentId]);
+    await pool.query("DELETE FROM documents WHERE assessment_id = $1", [
+      assessmentId,
+    ]);
   }
 
   // Parse document preview and metadata
-  const parsed = await parseDocument(file.path, file.originalname, file.mimetype);
+  const parsed = await parseDocument(
+    file.path,
+    file.originalname,
+    file.mimetype,
+  );
 
   const docRes = await pool.query(
     `INSERT INTO documents (assessment_id, filename, original_name, mime_type, file_size, file_path, extracted_text_preview, metadata)
@@ -90,20 +156,31 @@ async function attachDocument({ assessmentId, file, userId, allowReplace = false
       file.path,
       parsed.preview,
       JSON.stringify(parsed.metadata),
-    ]
+    ],
   );
 
   await pool.query(
     `UPDATE assessments 
      SET status = $1, progress_step = $2, failure_reason = NULL 
      WHERE id = $3`,
-    [ASSESSMENT_STATUSES.UPLOADED, 'Document Uploaded & Validated', assessmentId]
+    [
+      ASSESSMENT_STATUSES.UPLOADED,
+      "Document Uploaded & Validated",
+      assessmentId,
+    ],
   );
 
-  await logAudit(userId, assessment.organization_id, 'DOCUMENT_UPLOADED', 'documents', docRes.rows[0].id, {
-    originalName: file.originalname,
-    fileSize: file.size,
-  });
+  await logAudit(
+    userId,
+    assessment.organization_id,
+    "DOCUMENT_UPLOADED",
+    "documents",
+    docRes.rows[0].id,
+    {
+      originalName: file.originalname,
+      fileSize: file.size,
+    },
+  );
 
   return docRes.rows[0];
 }
@@ -118,7 +195,7 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
      FROM assessments a
      JOIN organizations o ON a.organization_id = o.id
      WHERE a.id = $1`,
-    [assessmentId]
+    [assessmentId],
   );
 
   if (assessRes.rows.length === 0) {
@@ -126,9 +203,12 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
   }
 
   const assessment = assessRes.rows[0];
-  const docRes = await pool.query('SELECT * FROM documents WHERE assessment_id = $1', [assessmentId]);
+  const docRes = await pool.query(
+    "SELECT * FROM documents WHERE assessment_id = $1",
+    [assessmentId],
+  );
   if (docRes.rows.length === 0) {
-    throw new Error('Cannot process assessment: No document uploaded yet.');
+    throw new Error("Cannot process assessment: No document uploaded yet.");
   }
 
   const documentRecord = docRes.rows[0];
@@ -139,58 +219,107 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
       `UPDATE assessments 
        SET status = $1, progress_step = $2 
        WHERE id = $3`,
-      [ASSESSMENT_STATUSES.PROCESSING, 'Parsing Document Content', assessmentId]
+      [
+        ASSESSMENT_STATUSES.PROCESSING,
+        "Parsing Document Content",
+        assessmentId,
+      ],
     );
 
     // Parse full text
     const parsedDoc = await parseDocument(
       documentRecord.file_path,
       documentRecord.original_name,
-      documentRecord.mime_type
+      documentRecord.mime_type,
     );
 
     if (!parsedDoc.text || parsedDoc.text.trim().length === 0) {
-      throw new Error('Uploaded document contains no readable text content.');
+      throw new Error("Uploaded document contains no readable text content.");
     }
 
     await pool.query(
       `UPDATE assessments 
        SET status = $1, progress_step = $2 
        WHERE id = $3`,
-      [ASSESSMENT_STATUSES.EXTRACTING, 'Gemini Extracting Facts & Discovering Evidence', assessmentId]
+      [
+        ASSESSMENT_STATUSES.EXTRACTING,
+        "Gemini Extracting Facts & Discovering Evidence",
+        assessmentId,
+      ],
     );
 
-    // Call Gemini for structured business facts and candidate risks
-    const orgProfile = {
-      name: assessment.org_name,
-      industry: assessment.org_industry,
-      description: assessment.org_description,
+    // Load active Risk Categories and Rules configured for the selected Rule Group
+    const catDbRes = await pool.query(
+      "SELECT code, name, default_weight, description FROM risk_categories WHERE is_active = true ORDER BY code ASC",
+    );
+    const categoriesConfig = catDbRes.rows;
+
+    let activeRules = [];
+    if (assessment.rule_group_id) {
+      const groupRulesRes = await pool.query(
+        "SELECT * FROM risk_rules WHERE is_active = true AND rule_group_id = $1 ORDER BY category_code ASC, id ASC",
+        [assessment.rule_group_id],
+      );
+      if (groupRulesRes.rows.length > 0) {
+        activeRules = groupRulesRes.rows;
+      }
+    }
+
+    // If no group-specific rules found, fallback to all active rules
+    if (activeRules.length === 0) {
+      const defaultRulesRes = await pool.query(
+        "SELECT * FROM risk_rules WHERE is_active = true ORDER BY category_code ASC, id ASC",
+      );
+      activeRules = defaultRulesRes.rows;
+    }
+
+    // Target Profile for AI: STRICTLY ANONYMOUS (Client Name and Number remain strictly in DB)
+    const targetProfile = {
+      target_type: "SINGLE_USER",
     };
 
-    const extractionResult = await extractDocumentFactsAndRisks(parsedDoc.text, orgProfile);
+    const extractionResult = await extractDocumentFactsAndRisks(
+      parsedDoc.text,
+      targetProfile,
+      categoriesConfig,
+      activeRules,
+    );
 
     // Clear any previous records for clean run
-    await pool.query('DELETE FROM extracted_facts WHERE assessment_id = $1', [assessmentId]);
-    await pool.query('DELETE FROM identified_risks WHERE assessment_id = $1', [assessmentId]);
-    await pool.query('DELETE FROM risk_scores WHERE assessment_id = $1', [assessmentId]);
-    await pool.query('DELETE FROM ai_analyses WHERE assessment_id = $1', [assessmentId]);
-    await pool.query('DELETE FROM ai_recommendations WHERE assessment_id = $1', [assessmentId]);
+    await pool.query("DELETE FROM extracted_facts WHERE assessment_id = $1", [
+      assessmentId,
+    ]);
+    await pool.query("DELETE FROM identified_risks WHERE assessment_id = $1", [
+      assessmentId,
+    ]);
+    await pool.query("DELETE FROM risk_scores WHERE assessment_id = $1", [
+      assessmentId,
+    ]);
+    await pool.query("DELETE FROM ai_analyses WHERE assessment_id = $1", [
+      assessmentId,
+    ]);
+    await pool.query(
+      "DELETE FROM ai_recommendations WHERE assessment_id = $1",
+      [assessmentId],
+    );
 
     // Save Extracted Facts
-    for (const fact of (extractionResult.extracted_facts || [])) {
+    for (const fact of extractionResult.extracted_facts || []) {
       await pool.query(
         `INSERT INTO extracted_facts (assessment_id, category_code, fact_key, fact_value, numerical_value, raw_evidence_text, source_location, confidence)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           assessmentId,
-          (fact.category_code || 'OPERATIONAL').toUpperCase(),
-          fact.fact_key || 'Fact',
-          fact.fact_value || '',
-          typeof fact.numerical_value === 'number' ? fact.numerical_value : null,
-          fact.raw_evidence_text || fact.fact_value || '',
-          fact.source_location || 'Document',
+          (fact.category_code || "FINANCIAL").toUpperCase(),
+          fact.fact_key || "Fact",
+          fact.fact_value || "",
+          typeof fact.numerical_value === "number"
+            ? fact.numerical_value
+            : null,
+          fact.raw_evidence_text || fact.fact_value || "",
+          fact.source_location || "Document",
           fact.confidence || 0.95,
-        ]
+        ],
       );
     }
 
@@ -201,46 +330,56 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
        WHERE id = $4`,
       [
         ASSESSMENT_STATUSES.ASSESSING,
-        'Deterministic Risk Engine Calculating Inherent & Residual Scores',
-        extractionResult.document_summary || '',
+        "Deterministic Risk Engine Calculating Inherent & Residual Scores",
+        extractionResult.document_summary || "",
         assessmentId,
-      ]
+      ],
     );
 
     // Load active DB rules and evaluate facts
-    const matchedRules = await evaluateFactsAgainstRules(extractionResult.extracted_facts);
-
-    // Build category config
-    const catDbRes = await pool.query('SELECT code, name, default_weight FROM risk_categories WHERE is_active = true');
-    const categoriesConfig = catDbRes.rows;
+    const matchedRules = await evaluateFactsAgainstRules(
+      extractionResult.extracted_facts,
+      activeRules,
+    );
 
     const calculatedRisks = [];
 
     // Process Candidate Risks
-    for (const candidate of (extractionResult.candidate_risks || [])) {
-      const catCode = (candidate.category_code || 'OPERATIONAL').toUpperCase();
+    for (const candidate of extractionResult.candidate_risks || []) {
+      const catCode = (candidate.category_code || "OPERATIONAL").toUpperCase();
 
       // Check if a business rule matched this factor
       const matchingRule = matchedRules.find(
-        m => m.categoryCode === catCode &&
-             (candidate.risk_name.toLowerCase().includes(m.factorName.toLowerCase()) ||
-              candidate.risk_description.toLowerCase().includes(m.factorName.toLowerCase()))
+        (m) =>
+          m.categoryCode === catCode &&
+          (candidate.risk_name
+            .toLowerCase()
+            .includes(m.factorName.toLowerCase()) ||
+            candidate.risk_description
+              .toLowerCase()
+              .includes(m.factorName.toLowerCase())),
       );
 
       // Deterministic likelihood and impact
-      const likelihood = matchingRule ? matchingRule.likelihoodScore : (candidate.suggested_likelihood || 3);
-      const impact = matchingRule ? matchingRule.impactScore : (candidate.suggested_impact || 3);
+      const likelihood = matchingRule
+        ? matchingRule.likelihoodScore
+        : candidate.suggested_likelihood || 3;
+      const impact = matchingRule
+        ? matchingRule.impactScore
+        : candidate.suggested_impact || 3;
 
       const inherentResult = calculateInherentRisk(likelihood, impact);
 
       // Internal Controls Evaluation
-      const controlEval = evaluateControlEffectiveness(candidate.controls_identified || []);
+      const controlEval = evaluateControlEffectiveness(
+        candidate.controls_identified || [],
+      );
 
       // Residual Risk Calculation
       const residualResult = calculateResidualRisk(
         inherentResult.inherentRisk,
         controlEval.effectivenessPct,
-        controlEval.status
+        controlEval.status,
       );
 
       // Save Identified Risk
@@ -255,8 +394,8 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
         [
           assessmentId,
           catCode,
-          candidate.risk_name || 'Identified Enterprise Risk',
-          candidate.risk_description || '',
+          candidate.risk_name || "Identified Enterprise Risk",
+          candidate.risk_description || "",
           inherentResult.likelihood,
           inherentResult.impact,
           inherentResult.inherentRisk,
@@ -265,9 +404,11 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
           controlEval.status,
           residualResult.residualRisk,
           residualResult.classification,
-          matchingRule ? `Triggered Rule [${matchingRule.factorName}]: ${matchingRule.description}` : candidate.risk_description,
-          candidate.confidence || 'High',
-        ]
+          matchingRule
+            ? `Triggered Rule [${matchingRule.factorName}]: ${matchingRule.description}`
+            : candidate.risk_description,
+          candidate.confidence || "High",
+        ],
       );
 
       const savedRisk = riskInsertRes.rows[0];
@@ -279,27 +420,31 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
            VALUES ($1, $2, $3, $4)`,
           [
             savedRisk.id,
-            candidate.evidence_quote || 'Evidence extracted from document analysis.',
-            candidate.source_location || 'General',
-            candidate.confidence || 'High',
-          ]
+            candidate.evidence_quote ||
+              "Evidence extracted from document analysis.",
+            candidate.source_location || "General",
+            candidate.confidence || "High",
+          ],
         );
       }
 
       // Save Controls
-      if (candidate.controls_identified && Array.isArray(candidate.controls_identified)) {
+      if (
+        candidate.controls_identified &&
+        Array.isArray(candidate.controls_identified)
+      ) {
         for (const ctrl of candidate.controls_identified) {
           await pool.query(
             `INSERT INTO risk_controls (identified_risk_id, control_name, control_type, effectiveness_pct, status, source_evidence)
              VALUES ($1, $2, $3, $4, $5, $6)`,
             [
               savedRisk.id,
-              ctrl.control_name || 'Control mechanism',
-              ctrl.control_type || 'PREVENTATIVE',
+              ctrl.control_name || "Control mechanism",
+              ctrl.control_type || "PREVENTATIVE",
               ctrl.effectiveness_pct || 0,
-              ctrl.status || 'EVALUATED',
-              ctrl.evidence || '',
-            ]
+              ctrl.status || "EVALUATED",
+              ctrl.evidence || "",
+            ],
           );
         }
       }
@@ -321,7 +466,10 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
     }
 
     // Deterministic Category Score Calculation
-    const categoryScores = calculateCategoryScores(calculatedRisks, categoriesConfig);
+    const categoryScores = calculateCategoryScores(
+      calculatedRisks,
+      categoriesConfig,
+    );
     const eriResult = calculateEnterpriseRiskIndex(categoryScores);
 
     // Save Risk Scores for each category
@@ -336,7 +484,7 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
           cat.categoryScore,
           cat.weight,
           cat.weightedScore,
-        ]
+        ],
       );
     }
 
@@ -347,15 +495,16 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
        WHERE id = $5`,
       [
         ASSESSMENT_STATUSES.ANALYZING,
-        'Gemini Synthesizing Intelligence, Drivers & Action Priorities',
+        "Gemini Synthesizing Intelligence, Drivers & Action Priorities",
         eriResult.eriScore,
         eriResult.classification,
         assessmentId,
-      ]
+      ],
     );
 
     const postContext = {
-      organization: orgProfile,
+      targetProfile,
+      organization: targetProfile,
       extractedFacts: extractionResult.extracted_facts,
       calculatedRisks,
       categoryScores,
@@ -374,15 +523,20 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
         intelligence.risk_position_overview,
         JSON.stringify(intelligence.top_risk_drivers || []),
         intelligence.strategic_implications,
-      ]
+      ],
     );
 
     // Save AI Recommendations
-    for (const rec of (intelligence.recommendations || [])) {
+    for (const rec of intelligence.recommendations || []) {
       // Find matching identified risk if any
-      const matchingRisk = calculatedRisks.find(r => 
-        r.risk_name.toLowerCase().includes((rec.risk_name || '').toLowerCase()) ||
-        (rec.risk_name || '').toLowerCase().includes(r.risk_name.toLowerCase())
+      const matchingRisk = calculatedRisks.find(
+        (r) =>
+          r.risk_name
+            .toLowerCase()
+            .includes((rec.risk_name || "").toLowerCase()) ||
+          (rec.risk_name || "")
+            .toLowerCase()
+            .includes(r.risk_name.toLowerCase()),
       );
 
       await pool.query(
@@ -391,17 +545,22 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
         [
           assessmentId,
           matchingRisk ? matchingRisk.id : null,
-          rec.title || 'Risk Mitigation Action',
-          rec.recommendation_text || '',
-          ['IMMEDIATE', 'SHORT_TERM', 'MEDIUM_TERM'].includes(rec.priority) ? rec.priority : 'SHORT_TERM',
-          rec.suggested_timeframe || '30 days',
-          rec.expected_outcome || '',
-        ]
+          rec.title || "Risk Mitigation Action",
+          rec.recommendation_text || "",
+          ["IMMEDIATE", "SHORT_TERM", "MEDIUM_TERM"].includes(rec.priority)
+            ? rec.priority
+            : "SHORT_TERM",
+          rec.suggested_timeframe || "30 days",
+          rec.expected_outcome || "",
+        ],
       );
     }
 
     // Save Snapshot to Assessment History
-    const historyCount = await pool.query('SELECT count(*) FROM assessment_history WHERE organization_id = $1', [assessment.organization_id]);
+    const historyCount = await pool.query(
+      "SELECT count(*) FROM assessment_history WHERE organization_id = $1",
+      [assessment.organization_id],
+    );
     const versionLabel = `v${parseInt(historyCount.rows[0].count, 10) + 1}.0`;
 
     await pool.query(
@@ -414,7 +573,7 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
         eriResult.eriScore,
         eriResult.classification,
         JSON.stringify(categoryScores),
-      ]
+      ],
     );
 
     // Finalize Assessment: COMPLETED
@@ -422,23 +581,42 @@ async function runAssessmentPipeline(assessmentId, userId = null) {
       `UPDATE assessments 
        SET status = $1, progress_step = $2, completed_at = NOW() 
        WHERE id = $3`,
-      [ASSESSMENT_STATUSES.COMPLETED, 'Assessment Completed Successfully', assessmentId]
+      [
+        ASSESSMENT_STATUSES.COMPLETED,
+        "Assessment Completed Successfully",
+        assessmentId,
+      ],
     );
 
-    await logAudit(userId, assessment.organization_id, 'ASSESSMENT_COMPLETED', 'assessments', assessmentId, {
-      eriScore: eriResult.eriScore,
-      classification: eriResult.classification,
-      risksCount: calculatedRisks.length,
-    });
+    await logAudit(
+      userId,
+      assessment.organization_id,
+      "ASSESSMENT_COMPLETED",
+      "assessments",
+      assessmentId,
+      {
+        eriScore: eriResult.eriScore,
+        classification: eriResult.classification,
+        risksCount: calculatedRisks.length,
+      },
+    );
 
     return await getAssessmentDetails(assessmentId);
   } catch (err) {
-    console.error(`Assessment Pipeline failed for assessment ${assessmentId}:`, err);
+    console.error(
+      `Assessment Pipeline failed for assessment ${assessmentId}:`,
+      err,
+    );
     await pool.query(
       `UPDATE assessments 
        SET status = $1, progress_step = $2, failure_reason = $3 
        WHERE id = $4`,
-      [ASSESSMENT_STATUSES.FAILED, 'Assessment Failed', err.message, assessmentId]
+      [
+        ASSESSMENT_STATUSES.FAILED,
+        "Assessment Failed",
+        err.message,
+        assessmentId,
+      ],
     );
     throw err;
   }
@@ -460,15 +638,22 @@ async function getAssessmentDetails(assessmentId) {
   ] = await Promise.all([
     pool.query(
       `SELECT a.*, o.name as org_name, o.industry as org_industry, o.description as org_description,
-              u.full_name as creator_name
+              u.full_name as creator_name,
+              rg.name as rule_group_name
        FROM assessments a
        JOIN organizations o ON a.organization_id = o.id
        LEFT JOIN users u ON a.created_by_id = u.id
+       LEFT JOIN rule_groups rg ON a.rule_group_id = rg.id
        WHERE a.id = $1`,
-      [assessmentId]
+      [assessmentId],
     ),
-    pool.query('SELECT * FROM documents WHERE assessment_id = $1', [assessmentId]),
-    pool.query('SELECT * FROM extracted_facts WHERE assessment_id = $1 ORDER BY id ASC', [assessmentId]),
+    pool.query("SELECT * FROM documents WHERE assessment_id = $1", [
+      assessmentId,
+    ]),
+    pool.query(
+      "SELECT * FROM extracted_facts WHERE assessment_id = $1 ORDER BY id ASC",
+      [assessmentId],
+    ),
     pool.query(
       `SELECT r.*, c.name as category_name,
               COALESCE(json_agg(DISTINCT e.*) FILTER (WHERE e.id IS NOT NULL), '[]') as evidence_list,
@@ -480,7 +665,7 @@ async function getAssessmentDetails(assessmentId) {
        WHERE r.assessment_id = $1
        GROUP BY r.id, c.name
        ORDER BY r.residual_risk DESC, r.inherent_risk DESC`,
-      [assessmentId]
+      [assessmentId],
     ),
     pool.query(
       `SELECT s.*, c.name as category_name, c.description as category_desc
@@ -488,9 +673,11 @@ async function getAssessmentDetails(assessmentId) {
        JOIN risk_categories c ON s.category_code = c.code
        WHERE s.assessment_id = $1
        ORDER BY s.category_code ASC`,
-      [assessmentId]
+      [assessmentId],
     ),
-    pool.query('SELECT * FROM ai_analyses WHERE assessment_id = $1', [assessmentId]),
+    pool.query("SELECT * FROM ai_analyses WHERE assessment_id = $1", [
+      assessmentId,
+    ]),
     pool.query(
       `SELECT rec.*, r.risk_name, r.category_code,
               EXISTS (
@@ -513,7 +700,7 @@ async function getAssessmentDetails(assessmentId) {
            WHEN 'SHORT_TERM' THEN 2 
            ELSE 3 
          END ASC, rec.id ASC`,
-      [assessmentId]
+      [assessmentId],
     ),
     pool.query(
       `SELECT m.*, r.risk_name, r.category_code
@@ -521,7 +708,7 @@ async function getAssessmentDetails(assessmentId) {
        LEFT JOIN identified_risks r ON m.identified_risk_id = r.id
        WHERE m.assessment_id = $1
        ORDER BY m.created_at DESC`,
-      [assessmentId]
+      [assessmentId],
     ),
   ]);
 
@@ -547,22 +734,23 @@ async function getAssessmentDetails(assessmentId) {
 async function getAssessments(organizationId = null) {
   let query = `
     SELECT a.*, o.name as org_name, d.original_name as document_name, d.file_size,
-           u.full_name as creator_name,
+           u.full_name as creator_name, rg.name as rule_group_name,
            (SELECT count(*) FROM identified_risks WHERE assessment_id = a.id) as risk_count,
            (SELECT count(*) FROM mitigation_actions WHERE assessment_id = a.id) as mitigation_count
     FROM assessments a
     JOIN organizations o ON a.organization_id = o.id
     LEFT JOIN documents d ON a.id = d.assessment_id
     LEFT JOIN users u ON a.created_by_id = u.id
+    LEFT JOIN rule_groups rg ON a.rule_group_id = rg.id
   `;
   const params = [];
 
   if (organizationId) {
-    query += ' WHERE a.organization_id = $1';
+    query += " WHERE a.organization_id = $1";
     params.push(organizationId);
   }
 
-  query += ' ORDER BY a.created_at DESC';
+  query += " ORDER BY a.created_at DESC";
 
   const res = await pool.query(query, params);
   return res.rows;

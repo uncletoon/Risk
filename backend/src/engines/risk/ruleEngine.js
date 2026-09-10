@@ -3,15 +3,15 @@
 // Evaluates extracted document evidence and facts against configurable DB rules
 // ============================================================================
 
-const { pool } = require('../../config/db');
+const { pool } = require("../../config/db");
 
 /**
  * Extracts a numeric value from string (e.g. "87%", "$1,200,000", "2.8x", "48 hours")
  */
 function parseNumeric(val) {
   if (val === null || val === undefined) return null;
-  if (typeof val === 'number') return val;
-  const str = String(val).trim().replace(/,/g, '');
+  if (typeof val === "number") return val;
+  const str = String(val).trim().replace(/,/g, "");
   const match = str.match(/[-+]?[0-9]*\.?[0-9]+/);
   return match ? parseFloat(match[0]) : null;
 }
@@ -20,34 +20,47 @@ function parseNumeric(val) {
  * Evaluates a single condition
  */
 function evaluateCondition(operator, factValue, thresholdValue, numericalFact) {
-  const normFact = String(factValue || '').toLowerCase().trim();
-  const normThresh = String(thresholdValue || '').toLowerCase().trim();
+  const normFact = String(factValue || "")
+    .toLowerCase()
+    .trim();
+  const normThresh = String(thresholdValue || "")
+    .toLowerCase()
+    .trim();
 
-  const factNum = numericalFact !== null && numericalFact !== undefined ? numericalFact : parseNumeric(factValue);
+  const factNum =
+    numericalFact !== null && numericalFact !== undefined
+      ? numericalFact
+      : parseNumeric(factValue);
   const threshNum = parseNumeric(thresholdValue);
 
   switch (operator.toUpperCase()) {
-    case 'GT':
+    case "GT":
       if (factNum !== null && threshNum !== null) return factNum > threshNum;
       return false;
-    case 'GTE':
+    case "GTE":
       if (factNum !== null && threshNum !== null) return factNum >= threshNum;
       return false;
-    case 'LT':
+    case "LT":
       if (factNum !== null && threshNum !== null) return factNum < threshNum;
       return false;
-    case 'LTE':
+    case "LTE":
       if (factNum !== null && threshNum !== null) return factNum <= threshNum;
       return false;
-    case 'EQ':
-      if (factNum !== null && threshNum !== null) return Math.abs(factNum - threshNum) < 0.0001;
+    case "EQ":
+      if (factNum !== null && threshNum !== null)
+        return Math.abs(factNum - threshNum) < 0.0001;
       return normFact === normThresh;
-    case 'CONTAINS':
+    case "CONTAINS":
       return normFact.includes(normThresh);
-    case 'RANGE': {
+    case "RANGE": {
       // Expect threshold format: "min..max" or "min-max"
-      const parts = normThresh.split(/\.\.|-/).map(p => parseNumeric(p));
-      if (parts.length === 2 && parts[0] !== null && parts[1] !== null && factNum !== null) {
+      const parts = normThresh.split(/\.\.|-/).map((p) => parseNumeric(p));
+      if (
+        parts.length === 2 &&
+        parts[0] !== null &&
+        parts[1] !== null &&
+        factNum !== null
+      ) {
         return factNum >= parts[0] && factNum <= parts[1];
       }
       return false;
@@ -58,16 +71,25 @@ function evaluateCondition(operator, factValue, thresholdValue, numericalFact) {
 }
 
 /**
- * Loads active rules from PostgreSQL
+ * Loads active rules from PostgreSQL, optionally filtered by rule group
  */
-async function getActiveRules() {
+async function getActiveRules(ruleGroupId = null) {
   try {
+    if (ruleGroupId) {
+      const res = await pool.query(
+        "SELECT * FROM risk_rules WHERE is_active = true AND rule_group_id = $1 ORDER BY category_code ASC, id ASC",
+        [ruleGroupId],
+      );
+      if (res.rows.length > 0) {
+        return res.rows;
+      }
+    }
     const res = await pool.query(
-      'SELECT * FROM risk_rules WHERE is_active = true ORDER BY category_code ASC, id ASC'
+      "SELECT * FROM risk_rules WHERE is_active = true ORDER BY category_code ASC, id ASC",
     );
     return res.rows;
   } catch (err) {
-    console.error('Error fetching active risk rules:', err.message);
+    console.error("Error fetching active risk rules:", err.message);
     return [];
   }
 }
@@ -85,8 +107,10 @@ async function evaluateFactsAgainstRules(facts, customRules = null) {
   for (const rule of rules) {
     for (const fact of facts) {
       // Match category or generic factor
-      const categoryMatch = !rule.category_code || rule.category_code === fact.category_code;
-      const keyOrText = `${fact.fact_key} ${fact.fact_value} ${fact.raw_evidence_text || ''}`.toLowerCase();
+      const categoryMatch =
+        !rule.category_code || rule.category_code === fact.category_code;
+      const keyOrText =
+        `${fact.fact_key} ${fact.fact_value} ${fact.raw_evidence_text || ""}`.toLowerCase();
       const factorMatch = keyOrText.includes(rule.factor_name.toLowerCase());
 
       if (categoryMatch && factorMatch) {
@@ -94,7 +118,7 @@ async function evaluateFactsAgainstRules(facts, customRules = null) {
           rule.condition_operator,
           fact.fact_value,
           rule.threshold_value,
-          fact.numerical_value
+          fact.numerical_value,
         );
 
         if (isTriggered) {

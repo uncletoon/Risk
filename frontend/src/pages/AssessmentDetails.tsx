@@ -27,6 +27,7 @@ import {
   Sliders,
   Scale,
   ListTodo,
+  User,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -426,6 +427,61 @@ export default function AssessmentDetails() {
           </div>
         )}
       </div>
+
+      {/* Single Client / User Target Profile Summary Card */}
+      {(assessment.target_type === "SINGLE_USER" || assessment.client_name) && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center font-bold">
+                <User className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-secondary block">
+                  Assessed Individual Subject
+                </span>
+                <h3 className="text-sm font-black text-primary">
+                  {assessment.client_name || "Individual Client"}
+                </h3>
+              </div>
+            </div>
+
+            <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30">
+              Single Client Profile
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant">
+              <span className="text-[10px] font-bold text-on-surface-variant uppercase block">
+                Client Number / Reference #
+              </span>
+              <p className="font-extrabold text-primary font-mono mt-0.5">
+                {assessment.client_identifier || "Not Specified"}
+              </p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant">
+              <span className="text-[10px] font-bold text-on-surface-variant uppercase block">
+                Applied Risk Rule Engine
+              </span>
+              <p className="font-extrabold text-secondary mt-0.5">
+                {assessment.rule_group_name ||
+                  "Standard Individual Credit Rules"}
+              </p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant">
+              <span className="text-[10px] font-bold text-on-surface-variant uppercase block">
+                Data Privacy & Governance
+              </span>
+              <p className="font-bold text-tertiary mt-0.5 flex items-center gap-1 text-[11px]">
+                <span>Stored in DB only • Zero PII to AI</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Workspace Tabs Navigation (Scrollable on small screens) */}
       <div className="flex border-b border-outline-variant gap-1 sm:gap-2 overflow-x-auto no-scrollbar whitespace-nowrap -mx-4 sm:mx-0 px-4 sm:px-0">
